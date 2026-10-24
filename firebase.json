@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "chronoverse",
+    "site": "chronoverse-3d",
     "public": ".",
     "ignore": [
       "firebase.json",
