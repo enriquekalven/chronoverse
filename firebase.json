@@ -1,0 +1,112 @@
+{
+  "hosting": {
+    "site": "chronoverse",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**",
+      "**/__pycache__/**",
+      "shots/**",
+      "tools/**",
+      "scenes/**",
+      "server.py",
+      "README.md",
+      "CREDITS.md",
+      "firebase-debug.log",
+      "assets/models/muscles.glb",
+      "assets/models/pbr/reef_fish.glb",
+      "assets/models/pbr/gothic_cloister.glb",
+      "assets/models/pbr/powerplant.glb",
+      "assets/models/space/solar_system.glb",
+      "assets/polyhaven/models/jacaranda_tree/*.bin",
+      "assets/polyhaven/models/jacaranda_tree/*.gltf",
+      "assets/polyhaven/models/jacaranda_tree/textures/**",
+      "assets/polyhaven/models/tree_small_02/*.bin",
+      "assets/polyhaven/models/tree_small_02/*.gltf",
+      "assets/polyhaven/models/tree_small_02/textures/**",
+      "assets/polyhaven/models/island_tree_01/*.bin",
+      "assets/polyhaven/models/island_tree_01/*.gltf",
+      "assets/polyhaven/models/island_tree_01/textures/**",
+      "assets/polyhaven/models/island_tree_02/*.bin",
+      "assets/polyhaven/models/island_tree_02/*.gltf",
+      "assets/polyhaven/models/island_tree_02/textures/**",
+      "assets/polyhaven/models/fir_sapling_medium/*.bin",
+      "assets/polyhaven/models/fir_sapling_medium/*.gltf",
+      "assets/polyhaven/models/fir_sapling_medium/textures/**",
+      "assets/polyhaven/models/coast_rocks_02/*.bin",
+      "assets/polyhaven/models/coast_rocks_02/*.gltf",
+      "assets/polyhaven/models/coast_rocks_02/textures/**",
+      "assets/polyhaven/models/coast_rocks_05/*.bin",
+      "assets/polyhaven/models/coast_rocks_05/*.gltf",
+      "assets/polyhaven/models/coast_rocks_05/textures/**",
+      "assets/polyhaven/models/searsia_burchellii/*.bin",
+      "assets/polyhaven/models/searsia_burchellii/*.gltf",
+      "assets/polyhaven/models/searsia_burchellii/textures/**",
+      "assets/polyhaven/models/coastal_cliff_01/*.bin",
+      "assets/polyhaven/models/coastal_cliff_01/*.gltf",
+      "assets/polyhaven/models/coastal_cliff_01/textures/**",
+      "assets/polyhaven/models/wooden_candlestick/*.bin",
+      "assets/polyhaven/models/wooden_candlestick/*.gltf",
+      "assets/polyhaven/models/wooden_candlestick/textures/**",
+      "assets/polyhaven/models/ship_pinnace/*.bin",
+      "assets/polyhaven/models/ship_pinnace/*.gltf",
+      "assets/polyhaven/models/ship_pinnace/textures/**",
+      "assets/polyhaven/models/pine_roots/*.bin",
+      "assets/polyhaven/models/pine_roots/*.gltf",
+      "assets/polyhaven/models/pine_roots/textures/**",
+      "assets/polyhaven/models/mountainside/*.bin",
+      "assets/polyhaven/models/mountainside/*.gltf",
+      "assets/polyhaven/models/mountainside/textures/**",
+      "assets/polyhaven/models/quiver_tree_01/*.bin",
+      "assets/polyhaven/models/quiver_tree_01/*.gltf",
+      "assets/polyhaven/models/quiver_tree_01/textures/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; connect-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=()"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
+      },
+      {
+        "source": "/vendor/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
+      }
+    ]
+  }
+}

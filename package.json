@@ -1,0 +1,11 @@
+{
+  "name": "timeline-of-everything-3d",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ChronoVerse 3D — Interactive 3D scroll-driven timeline for kids from the Big Bang and first organisms to Dinosaurs, the Ice Age, Today (2026), and Year 3000.",
+  "license": "MIT",
+  "scripts": {
+    "start": "python3 server.py"
+  }
+}

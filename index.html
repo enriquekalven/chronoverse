@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
+  />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta
+    name="description"
+    content="ChronoVerse 3D (Hyper-Realistic Edition) — Scroll and fly through 13.8 billion years of history across 30 3D stops: Big Bang, Pangaea splitting into today's continents, Dinosaurs, Human Evolution (last 500k–100k years, Neanderthals, Homo sapiens, Beringia, Farming, Bronze Age, Greece, Rome, Medieval, Industrial Revolutions, Computers, iPhone, AI) to Year 3000!"
+  />
+  <title>ChronoVerse 3D — Hyper-Realistic Interactive Timeline (Big Bang to Year 3000)</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+</head>
+<body>
+  <!-- 3D WebGL Time Tunnel Canvas -->
+  <canvas
+    id="timeline-canvas"
+    aria-label="Interactive 3D Timeline from the Big Bang to Year 3000 — scroll to travel through time, drag to orbit 360 degrees"
+    tabindex="0"
+  ></canvas>
+
+  <!-- Floating 3D Point-of-Interest Markers -->
+  <div id="label-layer" class="label-layer" aria-hidden="false"></div>
+
+  <!-- Time-warp transition overlay (between eras) -->
+  <div id="warp-overlay" class="warp-overlay" aria-hidden="true">
+    <div class="warp-streaks"></div>
+    <div class="warp-caption"><span id="warp-era-label"></span></div>
+  </div>
+
+  <!-- Era reconstruction indicator (streams real scans / HDRIs for the next world) -->
+  <div id="world-loading" class="world-loading hidden" role="status" aria-live="polite">
+    <span class="world-loading-spinner" aria-hidden="true"></span>
+    <span id="world-loading-text">Reconstructing era from museum scans…</span>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen" role="status" aria-live="polite">
+    <div class="loading-card">
+      <div class="loading-logo" aria-hidden="true">⏳</div>
+      <h1 class="loading-title">ChronoVerse 3D</h1>
+      <p id="loading-status" class="loading-status">Loading real museum scans, photogrammetry forests, real-sky HDRIs &amp; NASA planetary maps…</p>
+      <div class="loading-bar" aria-hidden="true">
+        <div id="loading-bar-fill" class="loading-bar-fill"></div>
+      </div>
+      <p class="loading-hint">Scroll or use → to travel between eras • Drag to orbit 360° • ⌘/Ctrl + scroll to zoom</p>
+    </div>
+  </div>
+
+  <!-- Top Navigation & 9-Chapter Stepper -->
+  <header class="hud-header">
+    <div class="brand-cluster">
+      <div class="brand-logo" aria-hidden="true">⏳</div>
+      <div>
+        <h1 class="brand-title">ChronoVerse 3D <span class="brand-version-pill">HYPER-REAL</span></h1>
+        <p class="brand-subtitle">Big Bang → Pangaea Split → Dinosaurs → 500K Yr Human Evolution → iPhone &amp; AI → Year 3000</p>
+      </div>
+    </div>
+
+    <nav id="chapter-stepper" class="chapter-stepper" aria-label="9 Chapters of Time"></nav>
+
+    <div class="header-actions">
+      <button id="btn-open-pangaea" type="button" class="action-pill pangaea-btn" title="Watch Supercontinent Pangaea slowly split into today's 7 continents!">
+        🌍 Pangaea Split Lab
+      </button>
+      <button id="btn-open-atlas" type="button" class="action-pill atlas-btn" title="Browse all 30 stops from 13.8B years ago to Year 3000">
+        🗺️ All 30 Stops
+      </button>
+      <button id="btn-autoplay" type="button" class="action-pill tour-btn" aria-pressed="false">
+        ▶️ Autopilot Tour
+      </button>
+      <button id="btn-open-quiz" type="button" class="action-pill quiz-btn">
+        🏆 Time Quiz
+      </button>
+      <button id="btn-toggle-theme" type="button" class="action-pill ghost-btn" aria-pressed="false">
+        ☀️ Light Mode
+      </button>
+      <button id="btn-clean-view" type="button" class="action-pill ghost-btn" aria-pressed="false">
+        🖼️ Clean View
+      </button>
+    </div>
+  </header>
+
+  <!-- Quick Milestone Jump Ribbon + Cosmic Clock Pill -->
+  <section class="quick-stops-bar" aria-label="Quick milestone jump bar">
+    <div class="stops-bar-left">
+      <span class="stops-bar-label">⚡ Warp (30 Eras):</span>
+      <div id="quick-stop-chips" class="quick-stop-chips"></div>
+    </div>
+    <div class="cosmic-clock-pill" title="If all 13.8 billion years were squished into ONE 24-hour day, this is what time it would be!">
+      <span class="clock-icon" aria-hidden="true">🕛</span>
+      <span><strong>24-Hr Cosmic Clock:</strong> <span id="hud-cosmic-clock">12:00:00 AM</span></span>
+    </div>
+  </section>
+
+  <!-- Left Panel: Time Machine Navigator, Live Continental Drift Map & Controls -->
+  <aside class="hud-left-panel" aria-label="Time Machine Navigator">
+    <div class="navigator-card">
+      <div id="left-chapter-badge" class="chapter-eyebrow">CHAPTER 1 • COSMIC DAWN</div>
+      <div class="stop-counter-row">
+        <span id="left-stop-counter" class="stop-counter-badge">Stop 1 of 30</span>
+        <span id="left-era-date" class="stop-era-date">13.8 BILLION YEARS AGO</span>
+      </div>
+
+      <div class="nav-step-buttons">
+        <button id="btn-prev-stop" type="button" class="step-nav-btn">⬅️ Earlier</button>
+        <button id="btn-next-stop" type="button" class="step-nav-btn primary-step-btn">Next Era ➡️</button>
+      </div>
+
+      <!-- Live Continental Drift Mini-Map (Pangaea → Today's Continents) -->
+      <div class="paleo-drift-box">
+        <div class="paleo-drift-header">
+          <span class="paleo-drift-title">🌍 Continental Drift Tracker</span>
+          <button id="btn-mini-pangaea" type="button" class="paleo-expand-btn">Interactive Lab ↗</button>
+        </div>
+        <canvas
+          id="paleo-mini-canvas"
+          width="320"
+          height="160"
+          class="paleo-mini-canvas"
+          aria-label="Continental drift map for the active geological era"
+        ></canvas>
+        <p id="left-tectonic-stage" class="paleo-drift-caption">
+          Pre-Earth Cosmic Era
+        </p>
+      </div>
+
+      <div class="cosmic-day-box">
+        <div class="cosmic-day-title">🕛 The 24-Hour Cosmic Day Secret</div>
+        <p id="left-cosmic-clock-desc" class="cosmic-day-text">
+          If all 13.8 billion years were 1 single day: Earth forms at 4:06 PM, Pangaea forms at 11:33 PM, Homo sapiens appear at 11:59:59.4 PM, and AI arrives at 24:00:00!
+        </p>
+      </div>
+
+      <div class="view-toggles">
+        <button id="btn-toggle-bloom" type="button" class="toggle-chip active-toggle" aria-pressed="true">✨ HDR Bloom</button>
+        <button id="btn-toggle-ribbon" type="button" class="toggle-chip active-toggle" aria-pressed="true">🌫️ Ambient Occlusion</button>
+        <button id="btn-toggle-labels" type="button" class="toggle-chip active-toggle" aria-pressed="true">🏷️ 3D Labels</button>
+        <button id="btn-cam-in" type="button" class="toggle-chip">➕ Zoom In</button>
+        <button id="btn-cam-out" type="button" class="toggle-chip">➖ Zoom Out</button>
+      </div>
+
+      <div class="controls-hint">
+        <span>🖱️ <strong>Scroll</strong> next / previous era</span>
+        <span>🔄 <strong>Drag</strong> orbit 360°</span>
+        <span>⌨️ <strong>← / →</strong> step eras</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Panel: Story, What-If 3D Simulator, Stats & Facts -->
+  <aside id="right-inspector" class="hud-right-inspector" aria-label="Current Milestone Story and 3D Experiment">
+    <div class="inspector-header">
+      <span id="inspector-badge" class="inspector-badge">💥 13.8 BILLION YEARS AGO</span>
+      <div class="inspector-header-actions">
+        <button id="btn-read-aloud" type="button" class="read-aloud-btn" aria-pressed="false">🔊 Read Aloud</button>
+        <button id="btn-collapse-inspector" type="button" class="collapse-btn" aria-expanded="true">▼ Hide</button>
+      </div>
+    </div>
+
+    <div id="inspector-content" class="inspector-content">
+      <div id="inspector-cinema-figure" class="inspector-cinema-figure">
+        <img
+          id="inspector-cinema-img"
+          class="inspector-cinema-img"
+          src="./assets/scenes/big-bang.jpg"
+          alt="Concept illustration of the current historical milestone"
+        />
+        <div class="inspector-cinema-overlay">
+          <span class="cinema-tag">🖼️ Concept illustration (2D)</span>
+          <button id="btn-expand-imax" type="button" class="cinema-expand-btn">🔍 View large</button>
+        </div>
+      </div>
+
+      <h2 id="inspector-title" class="inspector-title">The Big Bang: Birth of Space &amp; Time</h2>
+      <p id="inspector-subtitle" class="inspector-subtitle"></p>
+      <p id="inspector-summary" class="inspector-summary"></p>
+
+      <!-- Interactive 3D "What If?" Experiment Card -->
+      <div class="what-if-card">
+        <div class="what-if-eyebrow">🧪 LIVE 3D "WHAT IF?" EXPERIMENT</div>
+        <p id="what-if-question" class="what-if-question"></p>
+        <button id="btn-what-if" type="button" class="what-if-btn" aria-pressed="false"></button>
+        <p id="what-if-explanation" class="what-if-explanation hidden"></p>
+      </div>
+
+      <h3 class="section-subtitle">📊 Era Snapshot</h3>
+      <div id="inspector-stats-grid" class="stats-grid"></div>
+
+      <h3 class="section-subtitle">✨ Mind-Blowing Kid Facts</h3>
+      <ul id="inspector-facts-list" class="fun-facts-list"></ul>
+    </div>
+  </aside>
+
+  <!-- Central Orbit ↔ Surface Portal Action Bar (Linear Warp-Speed Earth-to-Earth + Zoom Into World) -->
+  <div id="portal-action-bar" class="portal-action-bar" role="region" aria-label="Earth Orbit and Surface Zoom Controls">
+    <span id="portal-mode-badge" class="portal-mode-badge">🌌 SPACE TIME-LAPSE CORRIDOR</span>
+    <button id="btn-portal-dive" type="button" class="portal-dive-btn">
+      🔍 Zoom Into Earth: Explore in 3D
+    </button>
+    <button id="btn-portal-warp-next" type="button" class="portal-warp-btn" title="Travel at light-speed along the linear corridor to the next Earth!">
+      ⚡ Fast-Forward: Next Earth ➡️
+    </button>
+    <button id="btn-portal-autodive" type="button" class="portal-autodive-btn" aria-pressed="false" title="Automatically zoom into each Earth after warping">
+      🔄 Auto-Zoom: OFF
+    </button>
+  </div>
+
+  <!-- Bottom Timeline Scrubber -->
+  <footer class="hud-bottom" aria-label="Master 3D Timeline Scrubber">
+    <button id="btn-scrubber-prev" type="button" class="scrubber-step-btn" aria-label="Previous milestone">⏮️</button>
+    <div class="scrubber-wrapper">
+      <div class="scrubber-ticks" aria-label="Jump to critical Earth history events">
+        <button type="button" class="scrubber-tick-btn" data-stop="0">💥 13.8B Big Bang</button>
+        <button type="button" class="scrubber-tick-btn" data-stop="2">🌋 4.5B Molten Earth</button>
+        <button type="button" class="scrubber-tick-btn" data-stop="3">🦠 3.8B First Life</button>
+        <button type="button" class="scrubber-tick-btn" data-stop="7">🌍 252M Pangaea &amp; Great Dying</button>
+        <button type="button" class="scrubber-tick-btn" data-stop="9">🦖 155M–68M Dinosaurs</button>
+        <button type="button" class="scrubber-tick-btn highlight-tick" data-stop="10">☄️ 66M Dino Extinction</button>
+        <button type="button" class="scrubber-tick-btn highlight-tick" data-stop="13">🔥 400K Discovery of Fire</button>
+        <button type="button" class="scrubber-tick-btn" data-stop="16">🦣 20K Ice Age &amp; Americas</button>
+        <button type="button" class="scrubber-tick-btn" data-stop="18">🏛️ Pyramids, Greece &amp; Rome</button>
+        <button type="button" class="scrubber-tick-btn" data-stop="26">🤖 Steam → Moon → AI → 3000</button>
+      </div>
+      <input
+        id="timeline-scrubber"
+        type="range"
+        min="0"
+        max="29"
+        step="0.01"
+        value="0"
+        aria-label="Scrub through time from the Big Bang to Year 3000 across 30 milestones"
+      />
+    </div>
+    <button id="btn-scrubber-next" type="button" class="scrubber-step-btn" aria-label="Next milestone">⏭️</button>
+  </footer>
+
+  <!-- Interactive Pangaea & Continental Drift Splitter Modal -->
+  <div id="pangaea-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pangaea-modal-title">
+    <div class="modal-dialog pangaea-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 id="pangaea-modal-title">🌍 Interactive Pangaea &amp; Continental Drift Splitter (250 MYA → Today)</h2>
+          <p class="modal-subtitle">Drag the slider below to watch Supercontinent Pangaea slowly rift apart into today's 7 continents!</p>
+        </div>
+        <button id="btn-close-pangaea" type="button" class="icon-close-btn" aria-label="Close Pangaea Lab">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="pangaea-stage-bar">
+          <span id="pangaea-slider-badge" class="inspector-badge">250 MILLION YEARS AGO • SUPERCONTINENT PANGAEA</span>
+          <div class="pangaea-preset-chips">
+            <button type="button" class="stop-chip pangaea-preset" data-ma="250">250M Pangaea</button>
+            <button type="button" class="stop-chip pangaea-preset" data-ma="155">155M Laurasia &amp; Gondwana</button>
+            <button type="button" class="stop-chip pangaea-preset" data-ma="68">68M Late Cretaceous</button>
+            <button type="button" class="stop-chip pangaea-preset" data-ma="35">35M India Hits Asia (Himalayas)</button>
+            <button type="button" class="stop-chip pangaea-preset" data-ma="0.02">20K Ice Age Beringia Bridge</button>
+            <button type="button" class="stop-chip pangaea-preset" data-ma="0">Today (7 Continents)</button>
+          </div>
+        </div>
+        <canvas
+          id="pangaea-lab-canvas"
+          width="760"
+          height="380"
+          class="pangaea-lab-canvas"
+          aria-label="Interactive Pangaea to Modern Continents Map"
+        ></canvas>
+        <div class="pangaea-slider-wrap">
+          <div class="scrubber-ticks">
+            <span>250 MYA (Pangaea Unido)</span>
+            <span>180 MYA (Atlantic Opens)</span>
+            <span>100 MYA (India Races North)</span>
+            <span>45 MYA (Himalaya Uplift)</span>
+            <span>Today (0 MYA)</span>
+          </div>
+          <input
+            id="pangaea-scrubber"
+            type="range"
+            min="0"
+            max="250"
+            step="0.5"
+            value="250"
+            aria-label="Scrub continental drift from 250 million years ago to today"
+          />
+        </div>
+        <p id="pangaea-lab-description" class="inspector-summary"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- All 30 Stops Atlas Modal -->
+  <div id="atlas-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="atlas-modal-title">
+    <div class="modal-dialog atlas-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 id="atlas-modal-title">🗺️ Time-Machine Atlas: All 30 Hyper-Real Milestones (13.8B Yrs Ago → Year 3000)</h2>
+          <p class="modal-subtitle">Click any era below to warp the 3D camera straight there!</p>
+        </div>
+        <button id="btn-close-atlas" type="button" class="icon-close-btn" aria-label="Close Atlas">✕</button>
+      </div>
+      <div class="atlas-controls">
+        <input
+          id="atlas-search"
+          type="search"
+          class="atlas-search-input"
+          placeholder="Search Pangaea, Neanderthals, Homo sapiens, fire, Beringia, farming, Bronze Age, Greece, Rome, Medieval, Industrial, iPhone, AI…"
+          aria-label="Search timeline milestones"
+        />
+      </div>
+      <div id="atlas-grid" class="atlas-grid" role="list"></div>
+    </div>
+  </div>
+
+  <!-- Time-Traveler Quiz Modal -->
+  <div id="quiz-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="quiz-modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="quiz-modal-title">🏆 Time-Traveler Challenge (Big Bang, Pangaea &amp; Human Evolution to Year 3000)</h2>
+        <button id="btn-close-quiz" type="button" class="icon-close-btn" aria-label="Close Quiz">✕</button>
+      </div>
+      <div id="quiz-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Fullscreen 8K IMAX Photorealistic Cinema Modal -->
+  <div id="imax-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="imax-modal-title">
+    <div class="modal-dialog imax-dialog">
+      <div class="modal-header">
+        <div>
+          <span id="imax-modal-badge" class="inspector-badge"></span>
+          <h2 id="imax-modal-title"></h2>
+        </div>
+        <button id="btn-close-imax" type="button" class="icon-close-btn" aria-label="Close Fullscreen View">✕</button>
+      </div>
+      <div class="modal-body imax-modal-body">
+        <img id="imax-modal-img" class="imax-modal-img" src="./assets/scenes/big-bang.jpg" alt="Fullscreen photorealistic era visualization" />
+        <p id="imax-modal-caption" class="inspector-summary"></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
