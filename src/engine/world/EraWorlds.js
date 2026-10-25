@@ -354,14 +354,20 @@ export const WORLD_BUILDERS = {
   'big-bang': async (ctx) => {
     ctx.setEnv({ space: true, backgroundColor: 0x02010a, envIntensity: 0.35, fogDensity: 0.0, sunIntensity: 0.0, hemi: 0.1, exposure: 1.1 });
     ctx.setCamera({ distance: 22, pitch: 0.05, targetY: 0, minDistance: 8, maxDistance: 60 });
-    FX.createStarfield(ctx.group, { count: 2500, radius: 170, size: 0.7 });
+    // Cosmological realism: Zero stars existed at t < 1 s (first stars ignited ~100–200 Myr later).
+    // Instead, surround the primordial quark-gluon plasma with the Cosmic Microwave Background (CMB)
+    // acoustic multipole fluctuation horizon & Baryon Acoustic Oscillation (BAO) sound waves!
+    const cmbShell = ARCH.createCMBFluctuationShell(ctx.anim, { radius: 145 });
+    ctx.group.add(cmbShell);
+    ctx.poi('Cosmic Microwave Background (CMB, 380,000 yrs) — Penzias & Wilson (1964) / Gamow & Alpher', new THREE.Vector3(0, 12, -28));
     const neb = FX.createNebula(ctx.group, ctx.anim, { radius: 46, colorA: 0xffb060, colorB: 0x6b1fd8, colorC: 0x2a7fff, density: 1.25, speed: 0.04, steps: 34 });
     const core = FX.createGlowSphere(ctx.group, ctx.anim, { radius: 2.6, color: 0xffd28a, hot: 0xffffff, intensity: 3.2, turbulence: 1.4 });
     ctx.particles({ count: 1400, box: [90, 90, 90], center: [0, 0, 0], color: 0xffd8a8, size: 0.22, speed: 0.25, direction: 1, sway: 1.5, additive: true, fade: true });
-    ctx.poi('Quark–gluon plasma fireball (t < 1 s)', core, 3.4);
+    ctx.poi('Quark–gluon plasma fireball (t < 1 s) — Lemaître, Hubble & Guth Cosmic Inflation', core, 3.4);
     ctx.onWhatIf((on) => {
       neb.material.uniforms.uDensity.value = on ? 0.35 : 1.25;
       core.material.uniforms.uIntensity.value = on ? 1.2 : 3.2;
+      cmbShell.scale.setScalar(on ? 0.65 : 1.0);
     });
     ctx.anim.push((t) => {
       core.scale.setScalar(1 + 0.04 * Math.sin(t * 1.7));
@@ -377,12 +383,24 @@ export const WORLD_BUILDERS = {
     const star = FX.createGlowSphere(ctx.group, ctx.anim, { radius: 5.2, color: 0x9ec8ff, hot: 0xffffff, intensity: 3.4, turbulence: 2.2, position: [0, 0, 0] });
     const light = new THREE.PointLight(0xbcd8ff, 400, 300, 1.4);
     ctx.group.add(light);
+    // Supernova heavy-element nucleosynthesis shell (Fred Hoyle / B²FH: Carbon, Oxygen, Silicon, Iron)
+    const snShell = new THREE.Mesh(
+      new THREE.SphereGeometry(11.5, 36, 24),
+      new THREE.MeshBasicMaterial({ color: 0xff8a3d, wireframe: true, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending })
+    );
+    ctx.group.add(snShell);
     addSpiralGalaxy(ctx, { position: [-42, 14, -80], radius: 26, tilt: 1.0 });
     addSpiralGalaxy(ctx, { position: [48, -10, -95], radius: 18, tilt: 0.5, color: 0xffd0a0 });
-    ctx.poi('Population III hypergiant star (~300 solar masses)', star, 6.2);
+    ctx.poi('JWST High-Redshift Proto-Galaxy (z ~ 12–14) & Reionization Bubble', new THREE.Vector3(-42, 18, -80));
+    ctx.poi('Population III hypergiant star (~300 M☉) — H/He fusion (Payne-Gaposchkin & Hoyle B²FH)', star, 6.2);
     ctx.onWhatIf((on) => {
       star.material.uniforms.uIntensity.value = on ? 6.5 : 3.4;
-      star.material.uniforms.uColor.value.set(on ? 0xffffff : 0x9ec8ff);
+      star.material.uniforms.uColor.value.set(on ? 0xffa855 : 0x9ec8ff);
+      snShell.material.opacity = on ? 0.45 : 0.0;
+    });
+    ctx.anim.push((t) => {
+      snShell.rotation.y = t * 0.25;
+      snShell.scale.setScalar(1 + 0.12 * Math.sin(t * 1.8));
     });
   },
 
@@ -403,7 +421,8 @@ export const WORLD_BUILDERS = {
     ctx.particles({ count: 500, box: [80, 30, 80], center: [0, 12, 0], color: 0xff9a40, size: 0.08, speed: 0.6, direction: 1, sway: 0.5, additive: true, fade: true });
     ctx.smoke({ count: 24, scale: 6, rise: 30, start: [-8, 2, -10], opacity: 0.18, color: 0x3a2a24, speed: 0.25, spread: 4 });
     ctx.smoke({ count: 20, scale: 6, rise: 28, start: [14, 2, -20], opacity: 0.16, color: 0x3a2a24, speed: 0.22, spread: 4 });
-    ctx.poi('Theia (Mars-sized impactor) — 4.5 BYA', theia, 18);
+    ctx.poi('Theia (Mars-sized impactor, 4.5 BYA) — Hartmann & Davis Giant Impact Hypothesis', theia, 18);
+    ctx.poi('Hadean Basalt Crust & Jack Hills Detrital Zircons (4.4 BYA — Clair Patterson 4.55 Gyr Pb-Pb age)', new THREE.Vector3(3, 1.2, -3));
     ctx.onWhatIf((on) => {
       theia.material.uniforms.uIntensity.value = on ? 0.6 : 2.4;
       theia.visible = !on;
@@ -442,9 +461,9 @@ export const WORLD_BUILDERS = {
       const pl = new THREE.PointLight(0xff6a20, 18, 10, 1.8);
       pl.position.set(x, y + 1.2, z);
       ctx.group.add(pl);
-      if (i === 0) ctx.poi('Black smoker vent — 400 °C mineral-rich plume', m, h + 0.5);
+      if (i === 0) ctx.poi('Alkaline & Black-Smoker Hydrothermal Vents — proton gradients powering abiogenesis', m, h + 0.5);
     });
-    const dna = await ctx.prop(PBR('dna_helix.glb'), { x: 2.2, z: 0.6, y: 2.2, fit: 2.6, sinkToGround: false, emissive: 0x2ad4ff, emissiveIntensity: 0.6, poi: 'RNA / DNA genetic code — LUCA (4.0 BYA)' });
+    const dna = await ctx.prop(PBR('dna_helix.glb'), { x: 2.2, z: 0.6, y: 2.2, fit: 2.6, sinkToGround: false, emissive: 0x2ad4ff, emissiveIntensity: 0.6, poi: 'RNA → DNA Genetic Code — LUCA (~4.0 BYA, Carl Woese 3-Domain Tree of Life)' });
     if (dna) {
       ctx.anim.push((t) => {
         dna.rotation.y = t * 0.45;
@@ -455,8 +474,9 @@ export const WORLD_BUILDERS = {
     await ctx.scatter('coast_rocks_05', { count: 16, minScale: 0.5, maxScale: 1.1, radius: 45, innerRadius: 6, seed: 12, tint: 0x4a4e52 });
     ctx.onWhatIf((on) => {
       ctx.group.traverse((o) => {
-        if (o.isPointLight) o.intensity = on ? 40 : 18;
+        if (o.isPointLight) o.intensity = on ? 2 : 18;
       });
+      if (dna) dna.visible = !on;
     });
   },
 
@@ -490,10 +510,11 @@ export const WORLD_BUILDERS = {
       ctx.group.add(m);
       domes.push(m);
     }
-    ctx.poi('Stromatolite reef — cyanobacteria exhaling oxygen', domes[0], 1.2);
+    ctx.poi('Stromatolite reef — cyanobacteria exhaling O₂ (Great Oxidation Event, 2.4 BYA)', domes[0], 1.2);
+    ctx.poi('Eukaryotic Endosymbiosis (2.0 BYA, Lynn Margulis) & Ediacaran Biota (635–541 MYA)', new THREE.Vector3(-3.2, 0.6, 2.4));
     // oxygen bubbles streaming off the mats
     ctx.particles({ count: 500, box: [36, 1.6, 36], center: [0, 0.6, 0], color: 0xe8f6ff, size: 0.05, speed: 0.4, direction: 1, sway: 0.08, opacity: 0.8, fade: true });
-    // Snowball Earth on the horizon: ice floes + snowy ridge
+    // Snowball Earth on the horizon: ice floes + snowy ridge (Paul Hoffman 1998 Snowball Earth hypothesis)
     const snow = await ctx.material('snow_02', { repeat: 6, displacementScale: 0.15 });
     for (let i = 0; i < 18; i++) {
       const ang = rng() * Math.PI * 2;
@@ -511,7 +532,7 @@ export const WORLD_BUILDERS = {
     });
     ctx.onWhatIf((on) => {
       ctx.group.traverse((o) => {
-        if (o.isMesh && o.material === snow) o.scale.setScalar(on ? 1.6 : 1);
+        if (o.isMesh && o.material === snow) o.scale.setScalar(on ? 1.85 : 1);
       });
     });
   },
@@ -529,41 +550,38 @@ export const WORLD_BUILDERS = {
       ctx.scatter('rock_moss_set_01', { count: 40, minScale: 0.6, maxScale: 1.3, radius: 40, innerRadius: 2, seed: 4, tint: 0x6fa08a }),
       ctx.scatter(PBR('abalone_shell.glb'), { count: 14, fit: 0.42, minScale: 0.8, maxScale: 1.5, radius: 18, innerRadius: 1.5, seed: 5, align: 0.9 }),
     ]);
-    // Iconic Cambrian creatures — rigged & animated 3D models
-    const anom = await ctx.prop(PRE('anomalocaris.glb'), { x: 0.8, z: -2.2, y: 1.9, fit: 2.3, rotY: -0.5, sinkToGround: false, playAll: true, poi: 'Anomalocaris — Cambrian apex predator with compound eyes (515 MYA)' });
+    // Iconic Burgess Shale (508 MYA, discovered by Charles Doolittle Walcott 1909) & Chengjiang Cambrian biota:
+    const anom = await ctx.prop(PRE('anomalocaris.glb'), { x: 0.8, z: -2.2, y: 1.9, fit: 2.3, rotY: -0.5, sinkToGround: false, playAll: true, poi: 'Anomalocaris canadensis — 1 m Cambrian apex predator with 30,000-lens compound eyes (515 MYA)' });
     if (anom) {
       ctx.anim.push((t) => {
         anom.position.y = 1.9 + Math.sin(t * 1.4) * 0.18;
         anom.rotation.y = -0.5 + Math.sin(t * 0.4) * 0.25;
       });
     }
-    await ctx.prop(PRE('hallucigenia.glb'), { x: -2.0, z: 0.8, fit: 1.4, rotY: 0.6, playAll: true, poi: 'Hallucigenia — spine-armoured Cambrian lobopodian' });
-    await ctx.prop(PRE('opabinia.glb'), { x: 2.8, z: 0.5, y: 1.1, fit: 1.5, rotY: -0.9, sinkToGround: false, playAll: true, poi: 'Opabinia — five eyes & flexible proboscis' });
-    await ctx.prop(PRE('ammonite.glb'), { x: -3.2, z: -3.4, y: 2.4, fit: 1.3, rotY: 0.4, sinkToGround: false, playAll: true });
-    // a school of fish-like swimmers circling the reef
-    const fishProto = await ctx.assets.instantiate(PBR('barramundi_fish.glb'));
-    if (fishProto) {
-      fitModel(fishProto, 0.7);
-      const school = [];
-      for (let i = 0; i < 12; i++) {
-        const f = fishProto.clone(true);
-        f.userData.phase = (i / 12) * Math.PI * 2;
-        f.userData.r = 4.2 + (i % 4) * 0.8;
-        f.userData.h = 1.6 + (i % 3) * 0.5;
-        ctx.group.add(f);
-        school.push(f);
-      }
-      ctx.anim.push((t) => {
-        school.forEach((f) => {
-          const a = t * 0.35 + f.userData.phase;
-          f.position.set(Math.cos(a) * f.userData.r, f.userData.h + Math.sin(t * 1.3 + f.userData.phase) * 0.15, Math.sin(a) * f.userData.r);
-          f.rotation.y = -a + Math.PI;
-          f.rotation.z = Math.sin(t * 6 + f.userData.phase) * 0.08;
-        });
-      });
+    await ctx.prop(PRE('hallucigenia.glb'), { x: -2.0, z: 0.8, fit: 1.4, rotY: 0.6, playAll: true, poi: 'Hallucigenia sparsa — spine-armoured Cambrian lobopodian (Simon Conway Morris & Stephen Jay Gould)' });
+    await ctx.prop(PRE('opabinia.glb'), { x: 2.8, z: 0.5, y: 1.1, fit: 1.5, rotY: -0.9, sinkToGround: false, playAll: true, poi: 'Opabinia regalis — five stalked eyes & flexible claw-tipped proboscis' });
+
+    // Taxonomic accuracy: Replaced Devonian ammonite & Cenozoic teleost perch with authentic Cambrian Trilobites & Pikaia chordates!
+    const trilo1 = ARCH.createTrilobite(ctx.anim, { position: [0.4, ctx.terrain.heightAt(0.4, 1.8), 1.8], scale: 1.35, rotationY: -0.4 });
+    const trilo2 = ARCH.createTrilobite(ctx.anim, { position: [-1.4, ctx.terrain.heightAt(-1.4, -1.2), -1.2], scale: 1.05, rotationY: 0.85 });
+    ctx.group.add(trilo1, trilo2);
+    ctx.poi('Cambrian Trilobite (Paradoxides, 520 MYA) — calcified exoskeleton & crystal calcite compound eyes', trilo1, 0.7);
+
+    // School of undulating Pikaia gracilens & Haikouichthys — our earliest jawless chordate ancestors with a dorsal notochord!
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const px = Math.cos(a) * 3.4;
+      const pz = Math.sin(a) * 3.4;
+      const pikaia = ARCH.createPikaiaSwimmer(ctx.anim, { position: [px, 2.3 + (i % 3) * 0.35, pz], scale: 0.95, rotationY: -a + Math.PI / 2, phase: i * 1.1 });
+      ctx.group.add(pikaia);
+      if (i === 0) ctx.poi('Pikaia gracilens (508 MYA) — earliest primitive chordate with a dorsal notochord & myomeres (ancestor of all vertebrates)', pikaia, 0.5);
     }
+
     ctx.particles({ count: 900, box: [50, 20, 50], center: [0, 9, 0], color: 0xdff4ff, size: 0.07, speed: 0.4, direction: 1, sway: 0.2, opacity: 0.7, fade: true });
     ctx.particles({ count: 500, box: [40, 12, 40], center: [0, 5, 0], color: 0xffffff, size: 0.03, speed: 0.1, direction: 1, sway: 0.6, opacity: 0.35, additive: true });
+    ctx.onWhatIf((on) => {
+      if (anom) anom.scale.setScalar(on ? 1.35 : 1.0);
+    });
   },
 
   /* ---------------- 7. Tiktaalik shoreline & Carboniferous forest ---------------- */
@@ -594,16 +612,26 @@ export const WORLD_BUILDERS = {
     ]);
     ctx.shafts({ count: 7, origin: [10, 28, -10], target: [0, 0, 0], length: 40, radius: 1.5, opacity: 0.1, spread: 14 });
     ctx.particles({ count: 400, box: [40, 8, 40], center: [0, 3, 0], color: 0xffffff, size: 0.035, speed: 0.12, direction: 1, sway: 0.5, opacity: 0.3, additive: true });
-    // Giant Carboniferous dragonfly (Meganeura) & early terrestrial tetrapod/synapsid
-    const mega = await ctx.prop(PRE('meganeura.glb'), { x: 0.5, z: -1.5, y: 2.4, fit: 1.6, rotY: 0.4, sinkToGround: false, playAll: true, poi: 'Meganeura — 70 cm wingspan Carboniferous dragonfly' });
+
+    // Authentic 375 MYA Devonian Tiktaalik roseae (discovered by Neil Shubin, Edward Daeschler & Farish Jenkins 2004)
+    // crawling out of the water onto the mudflat with 4 wristed lobe-fins, flat triangular skull & mobile neck!
+    const tikY = ctx.terrain.heightAt(0.8, 3.6);
+    const tiktaalik = ARCH.createTiktaalik(ctx.anim, { position: [0.8, tikY, 3.6], scale: 1.45, rotationY: Math.PI + 0.25 });
+    ctx.group.add(tiktaalik);
+    ctx.poi('Tiktaalik roseae (375 MYA, Neil Shubin) — lobe-finned "fishapod" with humerus, radius, ulna, wrist & lungs pushing onto land', tiktaalik, 0.9);
+    addFootprintTrail(ctx, { from: [1.4, 0, 6.2], to: [0.5, 0, 2.2], steps: 8, size: 0.28, color: 0x3b2e20 });
+
+    // Giant Carboniferous dragonfly (Meganeura) & early amniote / synapsid lineage
+    const mega = await ctx.prop(PRE('meganeura.glb'), { x: 0.5, z: -1.5, y: 2.4, fit: 1.6, rotY: 0.4, sinkToGround: false, playAll: true, poi: 'Meganeura monyi — 70 cm wingspan Carboniferous dragonfly (35% atmospheric O₂)' });
     if (mega) {
       ctx.anim.push((t) => {
         mega.position.y = 2.4 + Math.sin(t * 2.5) * 0.22;
       });
     }
-    const dimet = await ctx.prop(PRE('dimetrodon.glb'), { x: -2.4, z: 1.5, fit: 3.1, rotY: 0.7, playAll: true, poi: 'Early land-walking tetrapod & synapsid lineage' });
-    animateCreatureRig(dimet, ctx, { path: [[-3.6, 2.2], [1.8, 0.6]], speed: 0.9 });
-    // Devonian lagoon life: an early shark and lobe-finned fish-like swimmers
+    const dimet = await ctx.prop(PRE('dimetrodon.glb'), { x: -2.8, z: 0.8, fit: 2.6, rotY: 0.7, playAll: true, poi: 'Amniote transition (Hylonomus → early synapsids) — waterproof egg frees vertebrates from water (312 MYA)' });
+    animateCreatureRig(dimet, ctx, { path: [[-3.8, 1.5], [-0.8, -0.2]], speed: 0.85 });
+
+    // Devonian lagoon life: an early shark (Cladoselache — sharks evolved ~420 MYA before trees!)
     const shark = await ctx.prop(PBR('shark_animated.glb'), { x: 2, z: 16, y: -1.6, fit: 3.4, playAll: true, timeScale: 0.9 });
     if (shark) {
       ctx.anim.push((t) => {
@@ -611,10 +639,12 @@ export const WORLD_BUILDERS = {
         shark.position.set(2 + Math.cos(a) * 9, -1.7 + Math.sin(t * 0.5) * 0.2, 18 + Math.sin(a) * 7);
         shark.rotation.y = -a + Math.PI / 2;
       });
-      ctx.poi('Devonian shark (sharks are older than trees)', shark, 1.6);
+      ctx.poi('Devonian Shark (Cladoselache, ~380 MYA) — cartilaginous sharks evolved before terrestrial trees', shark, 1.6);
     }
-    const fish = await ctx.prop(PBR('barramundi_fish.glb'), { x: -3, z: 9, y: -1.1, fit: 0.9, rotY: 1.2 });
-    if (fish) ctx.poi('Lobe-finned fish → Tiktaalik (375 MYA) hauling onto the mudflat', fish, 0.6);
+    ctx.onWhatIf((on) => {
+      tiktaalik.position.z = on ? 1.4 : 3.6;
+      tiktaalik.position.y = ctx.terrain.heightAt(0.8, tiktaalik.position.z);
+    });
   },
 
   /* ---------------- 8. Pangaea & the Great Dying ---------------- */
@@ -631,9 +661,9 @@ export const WORLD_BUILDERS = {
       ctx.scatter('stone_01', { count: 60, minScale: 0.8, maxScale: 1.6, radius: 45, innerRadius: 2, seed: 25 }),
     ]);
     // Permian-Triassic synapsids actively roaming Pangaea: Dimetrodon & Lystrosaurus
-    const dimet = await ctx.prop(PRE('dimetrodon.glb'), { x: -2.2, z: -2.2, fit: 3.8, rotY: 0.55, playAll: true, poi: 'Dimetrodon — Permian sail-backed synapsid (closer to mammals than dinosaurs)' });
+    const dimet = await ctx.prop(PRE('dimetrodon.glb'), { x: -2.2, z: -2.2, fit: 3.8, rotY: 0.55, playAll: true, poi: 'Dimetrodon (295–272 MYA) — Early Permian neural-spine sail synapsid (closer to mammals than dinosaurs)' });
     animateCreatureRig(dimet, ctx, { path: [[-4.2, -3.5], [0.8, -1.2]], speed: 1.0 });
-    const lystro = await ctx.prop(PRE('lystrosaurus.glb'), { x: 1.8, z: 0.6, fit: 1.65, rotY: -0.6, playAll: true, poi: 'Lystrosaurus — Great Dying survivor whose fossils across 3 continents proved Pangaea' });
+    const lystro = await ctx.prop(PRE('lystrosaurus.glb'), { x: 1.8, z: 0.6, fit: 1.65, rotY: -0.6, playAll: true, poi: 'Lystrosaurus — Great Dying dicynodont survivor whose fossils across Africa, India & Antarctica proved Alfred Wegener’s Pangaea' });
     animateCreatureRig(lystro, ctx, { path: [[3.2, 1.8], [-1.2, 2.8]], speed: 1.1 });
     // Siberian Traps volcanic ridge on the horizon using real photogrammetry mountain scan
     const ridge = await ctx.prop('mountainside', { x: -38, z: -125, scale: 5.5, rotY: 0.25 });
@@ -643,10 +673,10 @@ export const WORLD_BUILDERS = {
     ctx.smoke({ count: 30, scale: 14, rise: 70, start: [-38, 32, -125], opacity: 0.32, color: 0x2b2420, speed: 0.18, spread: 10 });
     ctx.particles({ count: 700, box: [90, 40, 90], center: [0, 18, 0], color: 0x9a8a80, size: 0.1, speed: 0.25, direction: -1, sway: 0.8, opacity: 0.55 });
     ctx.particles({ count: 200, box: [60, 30, 60], center: [0, 12, 0], color: 0xff9a40, size: 0.08, speed: 0.6, direction: 1, sway: 0.5, additive: true, fade: true });
-    await addDriftGlobeExhibit(ctx, { x: 4.8, z: 2.2, label: 'Pangaea — one supercontinent (250 MYA)' });
-    if (ridge) ctx.poi('Siberian Traps eruptions (the Great Dying, 252 MYA)', ridge, 28);
+    await addDriftGlobeExhibit(ctx, { x: 4.8, z: 2.2, label: 'Pangaea (250 MYA) — Alfred Wegener & Marie Tharp Plate Tectonics' });
+    if (ridge) ctx.poi('Siberian Traps flood basalts (the Great Dying, 252 MYA — 96% marine species lost)', ridge, 28);
     ctx.onWhatIf((on) => {
-      glow.intensity = on ? 300 : 2500;
+      glow.intensity = on ? 4200 : 2500;
     });
   },
 
@@ -664,16 +694,17 @@ export const WORLD_BUILDERS = {
       ctx.scatter('dead_tree_trunk', { count: 5, minScale: 0.9, maxScale: 1.3, radius: 35, innerRadius: 12, seed: 35 }),
     ]);
     ctx.particles({ count: 350, box: [40, 10, 40], center: [0, 4, 0], color: 0xffe8b0, size: 0.04, speed: 0.12, direction: 1, sway: 0.5, opacity: 0.35, additive: true });
-    // Living, rigged & walking Jurassic giants:
-    const apato = await ctx.prop(PRE('apatosaurus.glb'), { x: -4.8, z: -8.5, fit: 13.5, rotY: 0.65, playAll: true, poi: 'Apatosaurus — 22 m long-necked Jurassic sauropod (150 MYA)' });
+    // Living, rigged & walking Jurassic giants (Morrison / Solnhofen / Kayenta Formations, 195–145 MYA):
+    const apato = await ctx.prop(PRE('apatosaurus.glb'), { x: -4.8, z: -8.5, fit: 13.5, rotY: 0.65, playAll: true, poi: 'Apatosaurus ajax (152 MYA, Morrison Formation — O.C. Marsh) — 22 m sauropod with air-sac vertebrae' });
     animateCreatureRig(apato, ctx, { path: [[-6.5, -9.5], [-2.5, -7.2]], speed: 0.55 });
-    const allo = await ctx.prop(PRE('allosaurus-pandras.glb'), { x: 3.4, z: -2.8, fit: 7.2, rotY: -0.65, playAll: true, poi: 'Allosaurus fragilis — apex Jurassic predator stalking prey' });
+    const allo = await ctx.prop(PRE('allosaurus-pandras.glb'), { x: 3.4, z: -2.8, fit: 7.2, rotY: -0.65, playAll: true, poi: 'Allosaurus fragilis (155–145 MYA) — apex Jurassic theropod predator' });
     animateCreatureRig(allo, ctx, { path: [[5.2, -4.2], [1.4, -1.6]], speed: 1.1 });
-    const stego = await ctx.prop(PRE('stegosaurus.glb'), { x: -2.4, z: -1.6, fit: 5.8, rotY: 0.55, playAll: true, poi: 'Stegosaurus stenops — 17 bony dorsal plates & thagomizer tail spikes' });
+    const stego = await ctx.prop(PRE('stegosaurus.glb'), { x: -2.4, z: -1.6, fit: 5.8, rotY: 0.55, playAll: true, poi: 'Stegosaurus stenops (150 MYA) — 17 vascularized dorsal plates & 4-spike thagomizer tail' });
     animateCreatureRig(stego, ctx, { path: [[-4.0, -2.2], [-1.0, -0.8]], speed: 0.85 });
-    const galli = await ctx.prop(PRE('gallimimus.glb'), { x: 6.5, z: -7.5, fit: 4.2, rotY: -0.8, playAll: true, poi: 'Swift ornithomimid herd darting across the floodplain' });
-    animateCreatureRig(galli, ctx, { path: [[8.5, -9.0], [2.5, -5.5]], speed: 1.5 });
-    const arch = await ctx.prop(PRE('archaeopteryx.glb'), { x: 0.6, z: 2.2, y: 2.8, fit: 1.3, rotY: -0.4, sinkToGround: false, playAll: true, poi: 'Archaeopteryx — feathered link between dinosaurs and birds (150 MYA)' });
+    // Taxonomic accuracy: Replaced Late Cretaceous Gallimimus with Early Jurassic Dilophosaurus wetherilli (193 MYA)!
+    const dilopho = await ctx.prop(PRE('dilophosaurus.glb'), { x: 6.5, z: -7.5, fit: 5.2, rotY: -0.8, playAll: true, poi: 'Dilophosaurus wetherilli (193 MYA, Early Jurassic) — 7 m twin-crested theropod predator' });
+    animateCreatureRig(dilopho, ctx, { path: [[8.5, -9.0], [2.5, -5.5]], speed: 1.35 });
+    const arch = await ctx.prop(PRE('archaeopteryx.glb'), { x: 0.6, z: 2.2, y: 2.8, fit: 1.3, rotY: -0.4, sinkToGround: false, playAll: true, poi: 'Archaeopteryx lithographica (150 MYA, Solnhofen) — feathered transitional theropod-bird (John Ostrom & Thomas Henry Huxley)' });
     if (arch) {
       ctx.anim.push((t) => {
         const a = t * 0.65;
@@ -688,7 +719,7 @@ export const WORLD_BUILDERS = {
     plinth.position.set(3.8, py + 0.425, 3.0);
     plinth.castShadow = plinth.receiveShadow = true;
     ctx.group.add(plinth);
-    await ctx.prop(SI('allosaurus_fragilis_usnm.glb'), { x: 3.8, z: 3.0, y: py + 0.85, fit: 0.65, rotY: 0.4, poi: 'Smithsonian USNM Allosaurus claw fossil scan' });
+    await ctx.prop(SI('allosaurus_fragilis_usnm.glb'), { x: 3.8, z: 3.0, y: py + 0.85, fit: 0.65, rotY: 0.4, poi: 'Smithsonian USNM Allosaurus fragilis fossil scan (Dinosauria coined by Sir Richard Owen, 1842)' });
     ctx.onWhatIf((on) => {
       if (allo) allo.rotation.y = on ? 0.5 : -0.65;
       if (apato) apato.rotation.y = on ? -0.2 : 0.65;
@@ -708,16 +739,18 @@ export const WORLD_BUILDERS = {
       ctx.scatter('boulder_01', { count: 6, minScale: 0.8, maxScale: 1.5, radius: 45, innerRadius: 11, seed: 44 }),
     ]);
     ctx.particles({ count: 300, box: [40, 8, 40], center: [0, 3, 0], color: 0xfff0a0, size: 0.04, speed: 0.2, direction: 1, sway: 0.8, opacity: 0.4, additive: true });
-    // Living, rigged & striding T. rex facing off with Triceratops, Ankylosaurus, Parasaurolophus & soaring Pteranodon
-    const rex = await ctx.prop(PRE('tyrannosaurus-rex.glb'), { x: 3.3, z: -2.2, fit: 9.2, rotY: -0.95, playAll: true, poi: 'Tyrannosaurus rex — 12.3 m apex predator with 35,000 N bite force (68 MYA)' });
+    // Living, rigged & striding Late Cretaceous dinosaurs (68–66 MYA):
+    const rex = await ctx.prop(PRE('tyrannosaurus-rex.glb'), { x: 3.3, z: -2.2, fit: 9.2, rotY: -0.95, playAll: true, poi: 'Tyrannosaurus rex (68–66 MYA, discovered by Barnum Brown 1902) — 12.3 m apex predator with 35,000 N bite force' });
     animateCreatureRig(rex, ctx, { path: [[4.4, -2.8], [1.8, -1.6]], speed: 1.0, jawAmp: 0.28, strideAmp: 0.38 });
-    const trike = await ctx.prop(PRE('triceratops.glb'), { x: -2.6, z: -1.6, fit: 6.4, rotY: 0.92, playAll: true, poi: 'Triceratops horridus — three-horned frilled defender' });
+    const trike = await ctx.prop(PRE('triceratops.glb'), { x: -2.6, z: -1.6, fit: 6.4, rotY: 0.92, playAll: true, poi: 'Triceratops horridus — three-horned ceratopsian with solid bone parietal frill' });
     animateCreatureRig(trike, ctx, { path: [[-3.8, -2.2], [-1.4, -1.1]], speed: 0.95, headAmp: 0.22 });
-    const anky = await ctx.prop(PRE('ankylosaurus.glb'), { x: -8.2, z: -5.5, fit: 5.4, rotY: 0.55, playAll: true, poi: 'Ankylosaurus — osteoderm bone armour & tail club' });
+    const anky = await ctx.prop(PRE('ankylosaurus.glb'), { x: -8.2, z: -5.5, fit: 5.4, rotY: 0.55, playAll: true, poi: 'Ankylosaurus magniventris — osteoderm bone armour & 60 kg tail club' });
     animateCreatureRig(anky, ctx, { path: [[-9.5, -6.5], [-5.2, -4.0]], speed: 0.9 });
-    const para = await ctx.prop(PRE('parasaurolophus.glb'), { x: 7.4, z: -7.5, fit: 6.4, rotY: -0.45, playAll: true, poi: 'Parasaurolophus — hollow cranial crest resonating chamber' });
+    const para = await ctx.prop(PRE('parasaurolophus.glb'), { x: 7.4, z: -7.5, fit: 6.4, rotY: -0.45, playAll: true, poi: 'Parasaurolophus walkeri — hollow cranial crest acoustic resonator' });
     animateCreatureRig(para, ctx, { path: [[9.0, -8.5], [4.5, -5.8]], speed: 1.05 });
-    const ptera = await ctx.prop(PRE('pteranodon.glb'), { x: 0, z: -6, y: 6.2, fit: 5.2, rotY: 0.3, sinkToGround: false, playAll: true, poi: 'Pteranodon — 7 m wingspan flying pterosaur' });
+    const galli = await ctx.prop(PRE('gallimimus.glb'), { x: -5.5, z: -8.2, fit: 4.1, rotY: 0.6, playAll: true, poi: 'Gallimimus bullatus (70 MYA, Late Cretaceous Mongolia) — 55 km/h feathered ornithomimid' });
+    animateCreatureRig(galli, ctx, { path: [[-7.2, -9.2], [-2.8, -6.8]], speed: 1.5 });
+    const ptera = await ctx.prop(PRE('pteranodon.glb'), { x: 0, z: -6, y: 6.2, fit: 5.2, rotY: 0.3, sinkToGround: false, playAll: true, poi: 'Pteranodon longiceps — 7 m wingspan Late Cretaceous marine pterosaur' });
     if (ptera) {
       ctx.anim.push((t) => {
         const a = t * 0.35;
@@ -725,12 +758,13 @@ export const WORLD_BUILDERS = {
         ptera.rotation.y = -a + Math.PI;
       });
     }
-    const amber = await ctx.prop(PBR('mosquito_in_amber.glb'), { x: 0.2, z: 3.2, fit: 0.75, yOffset: 0.35, rotY: 0.6, poi: 'Cretaceous amber with trapped prehistoric mosquito' });
+    const amber = await ctx.prop(PBR('mosquito_in_amber.glb'), { x: 0.2, z: 3.2, fit: 0.75, yOffset: 0.35, rotY: 0.6, poi: 'Cretaceous Burmese/Canadian amber with preserved prehistoric insect & angiosperm pollen' });
     if (amber) ctx.anim.push((t) => {
       amber.rotation.y = t * 0.3;
     });
     ctx.onWhatIf((on) => {
       if (rex) rex.rotation.y = on ? 0.9 : -0.95;
+      if (trike) trike.rotation.y = on ? -0.4 : 0.92;
     });
   },
 
@@ -839,15 +873,20 @@ export const WORLD_BUILDERS = {
     });
     animateCreatureRig(terrorBird, ctx, { path: [[4.5, -5.8], [0.5, -2.5]], speed: 1.2 });
 
-    // Early Hominoid / Primate Ancestors emerging at the woodland edge
-    await spawnLivingHuman(ctx, {
-      x: -1.2, z: 2.4, height: 1.15, sex: 'female', style: 'hominin', action: 'walk',
-      path: [[-2.8, 2.8], [1.2, 1.8]], speed: 0.95,
-      poi: 'Early Miocene Hominoid ancestor — primates adapting to open woodland & savanna',
+    // Early Miocene Hominoid (Proconsul africanus, ~20 MYA) — tailless quadrupedal/arboreal ape at the woodland edge
+    const proconsul = ARCH.createProconsulApe(ctx.anim, {
+      position: [-1.2, ctx.terrain.heightAt(-1.2, 2.4), 2.4],
+      scale: 1.35,
+      rotationY: 0.4,
     });
+    ctx.group.add(proconsul);
+    ctx.poi('Proconsul africanus (~20 MYA, Miocene) — tailless quadrupedal hominoid ancestor before upright bipedalism', proconsul, 1.4);
 
-    await addDriftGlobeExhibit(ctx, { x: 4.8, z: 2.8, label: 'India collides with Asia (35 MYA — Himalayas Rise)' });
+    const globe = await addDriftGlobeExhibit(ctx, { x: 4.8, z: 2.8, label: 'India collides with Asia (50–35 MYA — Himalayas Rise)' });
     ctx.particles({ count: 300, box: [60, 20, 60], center: [0, 10, 0], color: 0xffffff, size: 0.04, speed: 0.08, direction: 1, sway: 0.6, opacity: 0.25, additive: true });
+    ctx.onWhatIf((on) => {
+      if (globe) globe.scale.setScalar(on ? 1.25 : 1.0);
+    });
   },
 
   /* ---------------- 13. Lucy & bipedalism (Laetoli) ---------------- */
@@ -864,36 +903,39 @@ export const WORLD_BUILDERS = {
       ctx.scatter('namaqualand_boulder_02', { count: 8, minScale: 0.8, maxScale: 1.6, radius: 50, innerRadius: 7, seed: 76 }),
     ]);
     addFootprintTrail(ctx, { from: [-3.5, 0, 5], to: [3.5, 0, -5], steps: 14 });
-    ctx.poi('Laetoli footprints — 3.66 MYA volcanic ash trackway of upright walkers', new THREE.Vector3(0, 0.2, 0));
+    ctx.poi('Laetoli footprints (Mary Leakey, 1978) — 3.66 MYA Sadiman volcanic ash trackway of upright walkers', new THREE.Vector3(0, 0.2, 0));
 
-    // Living, moving Australopithecus afarensis ("Lucy") & family group walking upright along the Laetoli trackway!
+    // Living, moving Australopithecus afarensis ("Lucy", AL 288-1, 1.05 m) & companion walking upright without anachronistic hafted spears!
     await spawnLivingHuman(ctx, {
-      x: -0.4, z: 0.5, height: 1.18, sex: 'female', style: 'hominin', action: 'walk',
+      x: -0.4, z: 0.5, height: 1.05, sex: 'female', style: 'hominin', action: 'walk',
       path: [[-1.4, 2.0], [1.8, -2.6]], speed: 0.85, phase: 2.4,
-      poi: 'Australopithecus afarensis ("Lucy", 3.2 MYA) — walking upright along the Laetoli trail',
+      poi: 'Australopithecus afarensis ("Lucy", AL 288-1, 3.2 MYA — Donald Johanson, 1974) — 1.05 m upright walker along the Laetoli trail',
     });
     await spawnLivingHuman(ctx, {
-      x: -1.4, z: 1.4, height: 1.36, sex: 'male', style: 'hominin', action: 'hunt', tool: 'spear',
+      x: -1.4, z: 1.4, height: 1.35, sex: 'male', style: 'hominin', action: 'walk',
       path: [[-2.2, 2.6], [0.8, -1.8]], speed: 0.85, phase: 3.0,
-      poi: 'Bipedal hominin companion — freed hands carry sticks, stones & food across the savanna',
+      poi: 'Australopithecus afarensis male (~1.35 m) — freed hands carry tubers, fruit & unmodified stones across the Rift Valley',
     });
     await spawnLivingHuman(ctx, {
-      x: 2.2, z: 1.4, height: 1.22, sex: 'female', style: 'hominin', action: 'knap', tool: 'handaxe', rotY: -0.7,
-      poi: 'Oldowan cobble tool-flaking — earliest stone tool experiments',
+      x: 2.2, z: 1.4, height: 1.15, sex: 'female', style: 'hominin', action: 'knap', tool: 'handaxe', rotY: -0.7,
+      poi: 'Lomekwian / Oldowan cobble tool-flaking (3.3–2.6 MYA) — earliest stone percussive flaking before Homo habilis',
     });
 
-    // Savanna proboscidean in the distant Rift Valley background
-    const savMammoth = await ctx.prop(PRE('mammoth.glb'), { x: -9.5, z: -11.0, fit: 4.2, rotY: 0.5, playAll: true, tint: 0x7d583a });
+    // Savanna Deinotherium / Anancus proboscidean in the distant Rift Valley background
+    const savMammoth = await ctx.prop(PRE('mammoth.glb'), { x: -9.5, z: -11.0, fit: 4.2, rotY: 0.5, playAll: true, tint: 0x7d583a, poi: 'Pliocene Rift Valley proboscidean (Anancus / Deinotherium)' });
     animateCreatureRig(savMammoth, ctx, { path: [[-12.0, -12.0], [-4.0, -9.5]], speed: 0.8 });
 
-    // Bipedal skeleton comparison exhibit on carved stone plinth
+    // Bipedal skeleton comparison exhibit on natural stone outcrop (scaled to Lucy's 1.05 m stature)
     const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.75, 0.25, 32), await ctx.material('rock_boulder_dry', { repeat: 1, displacementScale: 0 }));
     ensureUV1(plinth.geometry);
     plinth.position.set(4.4, ctx.terrain.heightAt(4.4, 2.5) + 0.125, 2.5);
     plinth.receiveShadow = plinth.castShadow = true;
     ctx.group.add(plinth);
-    await ctx.prop(ANAT('skeleton.glb'), { x: 4.4, z: 2.5, y: plinth.position.y + 0.125, fit: 1.15, rotY: -0.6, tint: 0xd9cbb4, roughness: 0.6, poi: 'Bipedal skeleton — bowl-shaped pelvis & angled femur for upright stride' });
+    const skel = await ctx.prop(ANAT('skeleton.glb'), { x: 4.4, z: 2.5, y: plinth.position.y + 0.125, fit: 1.05, rotY: -0.6, tint: 0xd9cbb4, roughness: 0.6, poi: 'Bipedal hominin anatomy — foramen magnum centered under skull, valgus knee & bowl-shaped pelvis (1.05 m)' });
     ctx.particles({ count: 350, box: [60, 6, 60], center: [0, 2, 0], color: 0xffe0b0, size: 0.05, speed: 0.15, direction: 1, sway: 1.2, opacity: 0.35, additive: true });
+    ctx.onWhatIf((on) => {
+      if (skel) skel.rotation.y = on ? 0.6 : -0.6;
+    });
   },
 
   /* ---------------- 14. Homo erectus & fire (Wonderwerk Cave) ---------------- */
@@ -923,24 +965,24 @@ export const WORLD_BUILDERS = {
       }
     }
     const hearth = ctx.fire({ position: [0, ctx.terrain.heightAt(0, 0) + 0.05, 0], scale: 1.35, intensity: 1.8, lightIntensity: 78 });
-    ctx.poi('🔥 Controlled Fire — Wonderwerk Cave (~1 million–400,000 YA)', hearth.group, 2.2);
+    ctx.poi('🔥 Controlled Fire — Wonderwerk Cave (~1 MYA) & Richard Wrangham’s Cooking Hypothesis', hearth.group, 2.2);
 
     // Living, clothed, animated Homo erectus band tending fire, knapping Acheulean axes & guarding the cave!
     await spawnLivingHuman(ctx, {
       x: -1.65, z: 0.15, rotY: 1.4, height: 1.70, sex: 'female', style: 'erectus',
       action: 'fire', tool: 'firebrand',
-      poi: 'Homo erectus Fire-Keeper — tending hearth flames to cook food & fuel brain growth',
+      poi: 'Homo erectus Fire-Keeper — cooking pre-digests food, fueling brain expansion from 600 → 1,000+ cm³',
     });
     await spawnLivingHuman(ctx, {
       x: 1.75, z: 0.45, rotY: -1.2, height: 1.74, sex: 'male', style: 'erectus',
       action: 'knap', tool: 'handaxe',
-      poi: 'Homo erectus Master Toolmaker — flaking symmetrical Acheulean teardrop stone hand-axes',
+      poi: 'Homo erectus Master Toolmaker (Turkana Boy / KNM-WT 15000 lineage) — flaking symmetrical Acheulean hand-axes',
     });
     await spawnLivingHuman(ctx, {
       x: -0.3, z: -2.6, height: 1.76, sex: 'male', style: 'erectus',
       action: 'hunt', tool: 'spear',
       path: [[-2.4, -2.6], [0.6, -2.8]], speed: 0.9,
-      poi: 'Homo erectus Hunter — patrolling with fire-hardened wooden Schöningen spear',
+      poi: 'Homo erectus / H. heidelbergensis Hunter — patrolling with fire-hardened wooden Schöningen spear (300,000 YA)',
     });
 
     // Acheulean hand-axes knapped from stone (teardrop bifaces) on a flat rock
@@ -960,7 +1002,7 @@ export const WORLD_BUILDERS = {
       axe.rotation.set(Math.PI / 2 - 0.3, 0, i * 0.7);
       axe.castShadow = true;
       ctx.group.add(axe);
-      if (i === 0) ctx.poi('Acheulean teardrop hand-axe (1.7 MYA bifacial stone tool)', axe, 0.45);
+      if (i === 0) ctx.poi('Acheulean teardrop hand-axe (1.76 MYA Mode 2 bifacial stone tool)', axe, 0.45);
     }
     ctx.particles({ count: 260, box: [20, 6, 20], center: [0, 2.5, 0], color: 0xffd090, size: 0.035, speed: 0.12, direction: 1, sway: 0.6, opacity: 0.35, additive: true });
     ctx.onWhatIf((on) => {
@@ -981,73 +1023,51 @@ export const WORLD_BUILDERS = {
 
     // Central shared encampment hearth where Homo sapiens, Neanderthals & Denisovans meet!
     const campFire = ctx.fire({ position: [0, ctx.terrain.heightAt(0, -0.8) + 0.05, -0.8], scale: 1.15, intensity: 1.65, lightIntensity: 58 });
-    ctx.poi('Shared Pleistocene Encampment — Sapiens, Neanderthals & Denisovans meet', campFire.group, 2.0);
+    ctx.poi('Shared Pleistocene Encampment — Sapiens, Neanderthals & Denisovans (Svante Pääbo paleogenomics, Nobel Prize 2022)', campFire.group, 2.0);
 
     // 1. Homo sapiens explorers (slender build, ochre-trimmed hide tunic, walking & gesturing)
     await spawnLivingHuman(ctx, {
       x: -1.8, z: 0.8, height: 1.75, sex: 'female', style: 'sapiens',
       action: 'walk', tool: 'spear',
       path: [[-3.2, 1.8], [-0.8, 0.4]], speed: 0.95,
-      poi: 'Homo sapiens (300,000 YA, Jebel Irhoud) — symbolic thought, long-distance trade & composite tools',
+      poi: 'Homo sapiens (315,000 YA, Jebel Irhoud, Morocco — Jean-Jacques Hublin) — globular braincase, chin & symbolic ochre',
     });
     await spawnLivingHuman(ctx, {
       x: -0.9, z: -1.9, rotY: 0.45, height: 1.78, sex: 'male', style: 'sapiens',
       action: 'debate', tool: 'torch',
-      poi: 'Homo sapiens Storyteller — complex vocal language & social networks',
+      poi: 'Homo sapiens Storyteller — FOXP2 vocal tract anatomy, complex syntax & long-distance obsidian exchange',
     });
 
     // 2. Homo neanderthalensis hunters (stockier cold-adapted build, heavy fur pelts, tending fire & crafting tools)
     await spawnLivingHuman(ctx, {
       x: 1.45, z: -0.4, rotY: -1.1, height: 1.65, sex: 'male', style: 'neanderthal',
       action: 'fire', tool: 'spear',
-      poi: 'Homo neanderthalensis (400K–40K YA) — stocky Ice Age hunter, birch-tar adhesive & Mousterian flint tools',
+      poi: 'Homo neanderthalensis (400K–40K YA) — ~1,450 cm³ braincase, distilled birch-bark pitch adhesive & Mousterian Levallois tools',
     });
     await spawnLivingHuman(ctx, {
       x: 2.5, z: 1.2, height: 1.62, sex: 'female', style: 'neanderthal',
       action: 'walk', tool: 'handaxe',
       path: [[3.4, 2.0], [1.4, 0.5]], speed: 0.88, phase: 2.1,
-      poi: 'Neanderthal & Sapiens interbreeding — 1–2% of modern Eurasian DNA',
+      poi: 'Neanderthal & Sapiens interbreeding (~55,000 YA) — 1.5–2.1% of modern non-African human DNA',
     });
 
-    // 3. Denisovan artisan working bone needles & jewelry
+    // 3. Denisovan artisan working bone needles & chloritite bracelets
     await spawnLivingHuman(ctx, {
       x: 0.3, z: -2.8, rotY: 0.1, height: 1.68, sex: 'female', style: 'iceage',
       action: 'knap', tool: 'handaxe',
-      poi: 'Denisovan (Siberia & Tibet) — gifted high-altitude EPAS1 gene to modern Tibetans',
+      poi: 'Denisovan (Denisova Cave, Altai & Baishiya Karst, Tibet) — gifted high-altitude EPAS1 gene & 3–5% DNA to Oceania',
     });
 
-    // 4K Photogrammetry Homo sapiens head scan on a carved stone pedestal at the side of the camp
-    const plinthMat = await ctx.material('marble_01', { repeat: 2, displacementScale: 0 });
-    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.52, 0.95, 28), plinthMat);
-    ensureUV1(p.geometry);
-    const px = -3.6, pz = -1.4;
-    const py = ctx.terrain.heightAt(px, pz);
-    p.position.set(px, py + 0.475, pz);
-    p.castShadow = p.receiveShadow = true;
-    ctx.group.add(p);
-    const head = await ctx.prop(PBR('lee_perry_smith_head.glb'), { x: px, z: pz, y: py + 0.95, fit: 0.62, rotY: 0.45, poi: 'Homo sapiens — high-resolution 4K photogrammetry cranial & facial scan' });
-    if (head) {
-      const [col, nor, spec] = await Promise.all([
-        ctx.assets.loadTexture('./assets/models/pbr/LeePerrySmith/Map-COL.jpg', { srgb: true, repeat: 1 }),
-        ctx.assets.loadTexture('./assets/models/pbr/LeePerrySmith/Infinite-Level_02_Tangent_SmoothUV.jpg', { repeat: 1 }),
-        ctx.assets.loadTexture('./assets/models/pbr/LeePerrySmith/Map-SPEC.jpg', { repeat: 1 }),
-      ]);
-      [col, nor, spec].forEach((t) => {
-        if (t) {
-          t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
-          t.flipY = false;
-        }
-      });
-      head.traverse((o) => {
-        if (o.isMesh) {
-          o.material = new THREE.MeshStandardMaterial({ map: col || null, normalMap: nor || null, normalScale: new THREE.Vector2(0.8, 0.8), roughnessMap: spec || null, roughness: 0.62, metalness: 0.0, color: 0xffffff });
-        }
-      });
-      ctx.anim.push((t) => {
-        head.rotation.y = 0.45 + Math.sin(t * 0.35) * 0.28;
-      });
-    }
+    // Natural limestone boulder workbench with Levallois prepared-core flint flakes & red ochre (replacing anachronistic marble bust)
+    const rockWorkbench = await ctx.prop('namaqualand_boulder_02', {
+      x: -3.2, z: -1.2, scale: 0.85, rotY: 0.4,
+      poi: 'Levallois Prepared-Core Flint & Red Ochre Workbench — shared Middle Paleolithic toolkit of Sapiens & Neanderthals',
+    });
     ctx.particles({ count: 220, box: [16, 5, 16], center: [0, 2, 0], color: 0xffe0b0, size: 0.03, speed: 0.08, direction: 1, sway: 0.4, opacity: 0.28, additive: true });
+    ctx.onWhatIf((on) => {
+      campFire.group.scale.setScalar(on ? 1.55 : 1.0);
+      if (rockWorkbench) rockWorkbench.rotation.y = on ? 1.0 : 0.4;
+    });
   },
 
   /* ---------------- 16. Out of Africa & cave art ---------------- */
@@ -1067,46 +1087,52 @@ export const WORLD_BUILDERS = {
     ceiling.material = rockMat;
     ceiling.scale.set(1, 0.75, 1);
     ctx.group.add(ceiling);
-    // Cave paintings projected onto the rock wall
-    const art = await ctx.assets.loadTexture('./assets/scenes/homo-sapiens.jpg', { srgb: true, repeat: 1 });
-    if (art) {
-      art.wrapS = art.wrapT = THREE.ClampToEdgeWrapping;
-      const decalGeo = new THREE.CylinderGeometry(8.85, 8.85, 3.6, 48, 1, true, Math.PI * 0.72, Math.PI * 0.56);
-      const decal = new THREE.Mesh(decalGeo, new THREE.MeshStandardMaterial({ map: art, transparent: true, opacity: 0.88, roughness: 1, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
-      decal.position.set(0, 3.0, 2.5);
-      decal.renderOrder = 3;
-      ctx.group.add(decal);
-      ctx.poi('Cave paintings — ochre horses, lions & hand stencils (Chauvet / Sulawesi, 40,000 YA)', decal, 2.2);
-    }
+
+    // Authentic 3D Upper Paleolithic Parietal Cave Mural (Chauvet / Lascaux / Sulawesi red-ochre horses & blown hand stencils)
+    const mural = ARCH.createPaleolithicCaveMural({ position: [0, 0.2, -5.8], rotationY: 0 });
+    ctx.group.add(mural);
+    ctx.poi('Upper Paleolithic Cave Mural — red ochre & charcoal horses, bison & blown negative hand stencils (Sulawesi 45.5K YA / Chauvet 36K YA)', mural, 2.4);
+
     // Torches lighting the gallery
+    const torchFires = [];
     [[-3.2, 0.8], [3.4, 0.6], [0.3, -0.4]].forEach(([x, z]) => {
       const y = ctx.terrain.heightAt(x, z);
       const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 }));
       stick.position.set(x, y + 0.7, z);
       stick.castShadow = true;
       ctx.group.add(stick);
-      ctx.fire({ position: [x, y + 1.35, z], scale: 0.45, intensity: 1.8, lightIntensity: 28, lightDistance: 14, smoke: false });
+      torchFires.push(ctx.fire({ position: [x, y + 1.35, z], scale: 0.45, intensity: 1.8, lightIntensity: 28, lightDistance: 14, smoke: false }));
     });
     // Living, clothed Paleolithic Cave Artists & Storytellers actively painting & grinding ochre!
     await spawnLivingHuman(ctx, {
       x: -1.1, z: -3.2, rotY: 3.0, height: 1.72, sex: 'female', style: 'sapiens',
       action: 'paint', tool: 'torch',
-      poi: 'Paleolithic Cave Artist — painting red ochre & charcoal murals by flickering torchlight',
+      poi: 'Paleolithic Cave Artist — blowing red-ochre hand stencils & painting charcoal horses by flickering tallow lamp',
     });
     await spawnLivingHuman(ctx, {
       x: 1.8, z: -2.2, rotY: -2.6, height: 1.75, sex: 'male', style: 'sapiens',
       action: 'knap', tool: 'handaxe',
-      poi: 'Ochre Pigment Maker — grinding iron oxide & charcoal with bone mortars',
+      poi: 'Ochre Pigment Maker — grinding hematite iron oxide & manganese dioxide with bone mortars (Blombos / Chauvet)',
     });
     await spawnLivingHuman(ctx, {
       x: -0.2, z: -1.2, height: 1.74, sex: 'male', style: 'sapiens',
       action: 'walk', tool: 'spear',
       path: [[-2.4, -1.4], [2.2, -1.2]], speed: 0.85,
-      poi: 'Upper Paleolithic Hunter & Storyteller — bone flutes, sewn clothing & symbolic art',
+      poi: 'Upper Paleolithic Explorer — crossing Bab-el-Mandeb & Sahul shelf to Australia (~65,000 YA, Madjedbebe)',
     });
-    await ctx.prop(PBR('nemetona_bust.glb'), { x: 2.6, z: -0.6, fit: 0.8, rotY: -0.4, poi: 'Carved ivory & stone sculpture (40,000 YA)' });
+
+    // Authentic 40,000 YA Swabian Jura Mammoth-Ivory Löwenmensch (Lion-Man) & Hohle Fels Vulture-Bone Flute on a natural rock slab
+    const ivoryArtifacts = ARCH.createPaleolithicIvoryArtifacts({
+      position: [2.5, ctx.terrain.heightAt(2.5, -0.6), -0.6],
+    });
+    ctx.group.add(ivoryArtifacts);
+    ctx.poi('Löwenmensch Mammoth-Ivory Lion-Man & Hohle Fels Vulture-Bone Flute (40,000 YA, Swabian Jura) — oldest figurative sculpture & musical instrument', ivoryArtifacts, 0.9);
+
     await ctx.scatter('stone_01', { count: 40, minScale: 0.6, maxScale: 1.3, radius: 20, innerRadius: 2.5, seed: 101 });
     ctx.particles({ count: 200, box: [14, 5, 14], center: [0, 2.5, 0], color: 0xffd8a0, size: 0.03, speed: 0.08, direction: 1, sway: 0.5, opacity: 0.3, additive: true });
+    ctx.onWhatIf((on) => {
+      torchFires.forEach((f) => f.group.scale.setScalar(on ? 0.75 : 0.45));
+    });
   },
 
   /* ---------------- 17. Beringia, mammoths & the Ice Age ---------------- */
@@ -1116,20 +1142,29 @@ export const WORLD_BUILDERS = {
     await ctx.ground('snow_02', { repeat: 20, amplitude: 1.4, frequency: 0.04, displacementScale: 0.18 });
     FX.createAurora(ctx.group, ctx.anim, { radius: 90, height: 34, baseY: 22, intensity: 1.2 });
     ctx.particles({ count: 1800, box: [90, 30, 90], center: [0, 14, 0], color: 0xffffff, size: 0.1, speed: 0.35, direction: -1, sway: 0.7, opacity: 0.85 });
+    // Authentic treeless Mammoth Steppe tundra (boulders, wind-scoured dry sedge/Artemisia & driftwood — no closed-canopy pine forest)
     await Promise.all([
-      ctx.scatter('fir_sapling_medium', { count: 24, minScale: 1.0, maxScale: 2.2, radius: 60, innerRadius: 9, seed: 111 }),
-      ctx.scatter('dead_tree_trunk', { count: 10, minScale: 0.9, maxScale: 1.4, radius: 50, innerRadius: 7, seed: 112 }),
-      ctx.scatter('boulder_01', { count: 10, minScale: 0.8, maxScale: 1.8, radius: 50, innerRadius: 6, seed: 113, tint: 0xd8dde4 }),
-      ctx.scatter('dry_branches_medium_01', { count: 30, minScale: 0.8, maxScale: 1.3, radius: 40, innerRadius: 3, seed: 114 }),
+      ctx.scatter('boulder_01', { count: 18, minScale: 0.8, maxScale: 2.0, radius: 55, innerRadius: 6, seed: 113, tint: 0xd8dde4 }),
+      ctx.scatter('dry_branches_medium_01', { count: 38, minScale: 0.8, maxScale: 1.3, radius: 45, innerRadius: 3.5, seed: 114 }),
+      ctx.scatter('grass_medium_01', { count: 160, minScale: 0.6, maxScale: 1.0, radius: 50, innerRadius: 4, seed: 115, tint: 0xc2b89a }),
     ]);
+
+    // Upper Paleolithic Mammoth-Bone & Hide Dwelling (Mezhirich / Beringian style)
+    const boneHut = ARCH.createMammothBoneHut({
+      position: [-4.8, ctx.terrain.heightAt(-4.8, 1.2), 1.2],
+      rotationY: 0.55,
+    });
+    ctx.group.add(boneHut);
+    ctx.poi('Mammoth-Tusk & Hide Shelter — treeless Ice Age steppe architecture framed with interlocking Mammuthus tusks & jaws', boneHut, 3.0);
+
     const camp = ctx.fire({ position: [2.2, ctx.terrain.heightAt(2.2, 1.5), 1.5], scale: 1.25, intensity: 1.75, lightIntensity: 82 });
-    ctx.poi('Ice-age hunters’ camp on the Bering land bridge (20,000 YA)', camp.group, 1.8);
+    ctx.poi('Beringian Paleo-Arctic Hearth (23,000–16,000 YA) — bone-fueled fire en route to White Sands, New Mexico', camp.group, 1.8);
     // Rigged, walking Woolly Mammoth herd (Mammuthus primigenius) marching across Beringia!
-    const m1 = await ctx.prop(PRE('mammoth.glb'), { x: -3.2, z: -3.5, fit: 5.4, rotY: 0.65, playAll: true, timeScale: 0.9, poi: 'Woolly Mammoth (Mammuthus primigenius) — 4 m tall, curved tusks & shaggy coat marching across Beringia' });
+    const m1 = await ctx.prop(PRE('mammoth.glb'), { x: -3.2, z: -3.5, fit: 5.4, rotY: 0.65, playAll: true, timeScale: 0.9, poi: 'Woolly Mammoth (Mammuthus primigenius) — 4 m tall, curved tusks & shaggy coat marching across treeless Mammoth Steppe' });
     animateCreatureRig(m1, ctx, { path: [[-5.5, -5.0], [0.5, -2.2]], speed: 0.9, strideAmp: 0.38 });
     const m2 = await ctx.prop(PRE('mammoth.glb'), { x: -9.5, z: -8.5, fit: 4.8, rotY: 0.55, playAll: true, timeScale: 0.85 });
     animateCreatureRig(m2, ctx, { path: [[-11.5, -9.8], [-5.2, -6.5]], speed: 0.85, strideAmp: 0.36 });
-    const m3 = await ctx.prop(PRE('mammoth.glb'), { x: 1.8, z: -10.0, fit: 3.4, rotY: 0.75, playAll: true, timeScale: 0.95, poi: 'Juvenile woolly mammoth marching with the herd' });
+    const m3 = await ctx.prop(PRE('mammoth.glb'), { x: 1.8, z: -10.0, fit: 3.4, rotY: 0.75, playAll: true, timeScale: 0.95, poi: 'Juvenile woolly mammoth marching with the matriarchal herd' });
     animateCreatureRig(m3, ctx, { path: [[-1.0, -11.0], [4.5, -7.8]], speed: 1.0, strideAmp: 0.40 });
 
     // Paleo-Arctic Hunters in fur parkas trekking across Beringia into the Americas!
@@ -1137,17 +1172,18 @@ export const WORLD_BUILDERS = {
       x: 0.8, z: 2.2, height: 1.72, sex: 'male', style: 'iceage',
       action: 'hunt', tool: 'spear',
       path: [[-1.5, 3.2], [3.5, 0.5]], speed: 0.95,
-      poi: 'Beringian Paleo-Arctic Hunter — crossing from Siberia to Alaska (~20,000 YA)',
+      poi: 'Beringian & Kelp-Highway Explorer — crossing into the Americas (White Sands footprints, 23,000–21,000 YA)',
     });
     await spawnLivingHuman(ctx, {
       x: 3.4, z: 1.8, rotY: -1.2, height: 1.66, sex: 'female', style: 'iceage',
       action: 'fire', tool: 'torch',
-      poi: ' Paleo-Arctic Explorer — tailored fur parkas sewn with bone eyed-needles',
+      poi: 'Paleo-Arctic Tailor — weatherproof caribou & hare-fur parkas sewn with bone eyed-needles & sinew',
     });
 
-    await addDriftGlobeExhibit(ctx, { x: 5.5, z: 3.5, iceAge: true, label: 'Beringia exposed — sea level −120 m' });
+    await addDriftGlobeExhibit(ctx, { x: 5.5, z: 3.5, iceAge: true, label: 'Last Glacial Maximum — sea level −125 m exposes Beringia' });
     ctx.onWhatIf((on) => {
-      camp.group.scale.setScalar(on ? 1.6 : 1);
+      camp.group.scale.setScalar(on ? 1.65 : 1);
+      boneHut.rotation.y = on ? 0.75 : 0.55;
     });
   },
 
@@ -1160,7 +1196,7 @@ export const WORLD_BUILDERS = {
     await ctx.scatter('grass_medium_01', { count: 720, minScale: 1.1, maxScale: 1.7, radius: 40, innerRadius: 5, seed: 121, tint: 0xd8b25a, mask: (x, z) => z < -2.2 || x > 5, wind: { amp: 0.09, speed: 1.5, height: 0.6 } });
     await ctx.scatter('shrub_02', { count: 16, minScale: 0.9, maxScale: 1.4, radius: 50, innerRadius: 12, seed: 122 });
     await ctx.scatter('tree_small_02', { count: 8, minScale: 0.9, maxScale: 1.3, radius: 60, innerRadius: 18, seed: 123 });
-    // Mud-brick house with wooden-beam flat roof
+    // Mud-brick house with wooden-beam flat roof (Çatalhöyük / Jericho Pre-Pottery Neolithic style)
     const mud = await ctx.material('sandstone_cracks', { repeat: 4, displacementScale: 0.08, color: 0xc9a77a });
     const wood = await ctx.material('rock_boulder_dry', { repeat: 2, displacementScale: 0, color: 0x6b4a2c });
     const house = new THREE.Group();
@@ -1181,12 +1217,22 @@ export const WORLD_BUILDERS = {
     house.position.set(-6, ctx.terrain.heightAt(-6, -6), -6);
     house.rotation.y = 0.5;
     ctx.group.add(house);
-    ctx.poi('Mud-brick farmhouse — first permanent villages (Fertile Crescent, 9,000 BCE)', house, 3.6);
-    await ctx.prop(PBR('village_waterwell.glb'), { x: -2.5, z: -2.0, fit: 2.2, rotY: 0.3, poi: 'Stone village well — permanent irrigation & water supply' });
-    const wagon = await ctx.prop(PBR('village_wagon.glb'), { x: 3.4, z: -1.4, fit: 2.4, rotY: -0.6, poi: 'Wheeled wooden cart (~3500 BCE) — revolutionizing agriculture & trade' });
+    ctx.poi('Mud-brick granary & dwelling — Çatalhöyük & Jericho (9,000–7,000 BCE)', house, 3.6);
+
+    // Göbekli Tepe T-shaped Megalithic Pillar (9,600 BCE, Klaus Schmidt excavation)
+    const gobekli = ARCH.createGobekliPillar({
+      position: [-4.6, ctx.terrain.heightAt(-4.6, 2.2), 2.2],
+      rotationY: 0.45,
+    });
+    ctx.group.add(gobekli);
+    ctx.poi('Göbekli Tepe T-Shaped Limestone Pillar (9,600 BCE, Anatolia — Klaus Schmidt) — world’s oldest monumental sanctuary carved with foxes & cranes', gobekli, 3.4);
+
+    await ctx.prop(PBR('village_waterwell.glb'), { x: -2.5, z: -2.0, fit: 2.2, rotY: 0.3, poi: 'Stone village well — permanent Neolithic irrigation & water supply' });
+    const wagon = await ctx.prop(PBR('village_wagon.glb'), { x: 3.4, z: -1.4, fit: 2.4, rotY: -0.6, poi: 'Late Neolithic / Chalcolithic Wheeled Cart (~3500 BCE) — draft oxen & bulk harvest transport' });
+    let wagonBoost = 1;
     if (wagon) {
       ctx.anim.push((t) => {
-        const u = Math.sin(t * 0.35) * 2.2;
+        const u = Math.sin(t * 0.35 * wagonBoost) * 2.2;
         const wx = 3.4 + u * 0.8;
         const wz = -1.4 + u * 0.5;
         wagon.position.set(wx, ctx.terrain.heightAt(wx, wz), wz);
@@ -1197,32 +1243,35 @@ export const WORLD_BUILDERS = {
     await spawnLivingHuman(ctx, {
       x: -0.6, z: -3.2, rotY: 0.25, height: 1.72, sex: 'male', style: 'farmer',
       hat: 'straw', action: 'harvest', tool: 'sickle',
-      poi: 'Neolithic Farmer — harvesting domesticated einkorn & emmer wheat with a flint-bladed sickle',
+      poi: 'Natufian / Neolithic Farmer — harvesting non-shattering domesticated einkorn & emmer wheat with a flint-bladed sickle',
     });
     await spawnLivingHuman(ctx, {
       x: 1.8, z: -3.8, rotY: -0.35, height: 1.66, sex: 'female', style: 'farmer',
       hat: 'straw', action: 'harvest', tool: 'hoe',
-      poi: 'Neolithic Cultivator — tilling fertile alluvial soil & planting grain rows',
+      poi: 'Neolithic Agronomist — independent crop domestication across Fertile Crescent (wheat), Yangtze (rice, 7000 BCE) & Mesoamerica (maize)',
     });
     await spawnLivingHuman(ctx, {
       x: -2.2, z: -0.4, height: 1.65, sex: 'female', style: 'farmer',
       action: 'walk', tool: 'jug',
       path: [[-2.2, -1.2], [-4.8, -3.5]], speed: 0.95,
-      poi: 'Village Water-Bearer — carrying fired clay vessels from the well to the granary',
+      poi: 'Village Potter & Water-Bearer — carrying fired ceramic vessels to the mud-brick granary',
     });
     await spawnLivingHuman(ctx, {
       x: 2.4, z: 0.4, height: 1.74, sex: 'male', style: 'farmer',
       hat: 'straw', action: 'walk', tool: 'basket',
       path: [[1.2, 0.8], [4.6, -0.4]], speed: 0.9,
-      poi: 'Grain Harvester — transporting bundled wheat sheaves to the village threshing floor',
+      poi: 'Grain Harvester — storing surplus harvests that fueled population growth from 5 million to 100+ million',
     });
 
     // Pottery & baskets (real photogrammetry scans)
-    await ctx.prop('ceramic_vase_01', { x: 0.6, z: 1.2, fit: 0.75, poi: 'Fired clay pottery — grain & olive-oil storage' });
+    await ctx.prop('ceramic_vase_01', { x: 0.6, z: 1.2, fit: 0.75, poi: 'Fired clay pottery — grain, beer & olive-oil storage' });
     await ctx.prop('jug_01', { x: 1.3, z: 1.0, fit: 0.65 });
     await ctx.prop('wooden_bowl_01', { x: -0.3, z: 1.6, fit: 0.5 });
     await ctx.prop('wicker_basket_01', { x: -1.4, z: 0.8, fit: 0.7 });
     ctx.particles({ count: 200, box: [50, 6, 50], center: [0, 2, 0], color: 0xfff0c0, size: 0.04, speed: 0.15, direction: 1, sway: 1.0, opacity: 0.3, additive: true });
+    ctx.onWhatIf((on) => {
+      wagonBoost = on ? 2.6 : 1.0;
+    });
   },
 
   /* ---------------- 19. Bronze Age & pyramids ---------------- */
@@ -1235,11 +1284,11 @@ export const WORLD_BUILDERS = {
     const second = ARCH.createPyramid(sandstone, { base: 70, height: 42, courses: 40, blockLen: 1.75, position: [44, 0, -175], rotationY: 0.15 });
     const third = ARCH.createPyramid(sandstone, { base: 36, height: 23, courses: 30, blockLen: 1.2, position: [98, 0, -195], rotationY: 0.1 });
     ctx.group.add(great, second, third);
-    ctx.poi('Great Pyramid of Giza — 146 m, 2.3 million blocks (2560 BCE)', great, 36);
+    ctx.poi('Great Pyramid of Giza (Pharaoh Khufu & Vizier Hemiunu, 2560 BCE) — 146.6 m tall, 2.3 million limestone blocks', great, 36);
     const mudbrick = await ctx.material('sandstone_cracks', { repeat: 3, displacementScale: 0.05, color: 0xb98f63 });
     const zig = ARCH.createZiggurat(mudbrick, { base: 34, tiers: 4, tierH: 4.5, position: [-88, 0, -85] });
     ctx.group.add(zig);
-    ctx.poi('Ziggurat of Ur — Mesopotamia (2100 BCE)', zig, 20);
+    ctx.poi('Great Ziggurat of Ur — King Ur-Nammu, Sumer / Mesopotamia (2100 BCE)', zig, 20);
     await ctx.water({ size: 500, y: -0.35, color: 0x2f6f7a, distortion: 1.0 });
     ctx.terrain.mesh.position.y = 0;
     await Promise.all([
@@ -1252,7 +1301,7 @@ export const WORLD_BUILDERS = {
     await spawnLivingHuman(ctx, {
       x: -3.2, z: -2.8, height: 1.73, sex: 'male', style: 'egyptian',
       action: 'haul', path: [[-5.5, -2.0], [1.5, -5.5]], speed: 0.9,
-      poi: 'Egyptian Pyramid Builder — hauling 2.5-ton Tura limestone blocks on wetted sand sleds',
+      poi: 'Giza Master Builder (Vizier Hemiunu & Imhotep lineage) — hauling 2.5-ton Tura limestone blocks on water-lubricated sleds',
     });
     await spawnLivingHuman(ctx, {
       x: -4.4, z: -2.2, height: 1.71, sex: 'male', style: 'egyptian',
@@ -1261,13 +1310,21 @@ export const WORLD_BUILDERS = {
     await spawnLivingHuman(ctx, {
       x: 2.8, z: -1.8, rotY: -0.6, height: 1.72, sex: 'male', style: 'egyptian',
       action: 'knap', tool: 'hammer',
-      poi: 'Bronze Age Stone-Mason — dressing limestone blocks with Arsenical Bronze chisels & dolerite pounders',
+      poi: 'Bronze Age Metallurgist & Mason — smelting 90% Copper + 10% Tin bronze chisels & dressing stone',
     });
     await spawnLivingHuman(ctx, {
       x: -2.2, z: 1.6, rotY: 0.5, height: 1.68, sex: 'female', style: 'egyptian',
       action: 'debate', tool: 'scroll',
-      poi: 'Royal Scribe & Astronomer — recording grain rations & stellar alignment on papyrus',
+      poi: 'Royal Scribe (Merer’s Diary / Cuneiform & Hieroglyphs) — recording Nile cargo, taxation & stellar alignments',
     });
+
+    // Bronze Smelting Foundry + Code of Hammurabi Diorite Stele (1750 BCE)
+    const foundry = ARCH.createBronzeFoundryAndStele(ctx.anim, {
+      position: [3.8, ctx.terrain.heightAt(3.8, 1.6), 1.6],
+      rotationY: -0.45,
+    });
+    ctx.group.add(foundry);
+    ctx.poi('Bronze Smelting Furnace (1085 °C Cu+Sn alloy) & Code of Hammurabi Stele (Babylon, 1750 BCE — 282 laws in Akkadian cuneiform)', foundry, 2.2);
 
     // Queen Nefertiti bust & Bronze Age vessels on carved sandstone altar
     const table = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.85, 1.3), sandstone);
@@ -1275,10 +1332,18 @@ export const WORLD_BUILDERS = {
     table.position.set(0, ctx.terrain.heightAt(0, 0) + 0.425, 0);
     table.castShadow = table.receiveShadow = true;
     ctx.group.add(table);
-    await ctx.prop(PBR('nefertiti_bust.glb'), { x: 0.2, z: 0, y: table.position.y + 0.425, fit: 1.15, rotY: 0.15, poi: 'Bust of Queen Nefertiti (1345 BCE) — high-res museum scan' });
-    await ctx.prop('brass_pot_01', { x: -1.35, z: 0.1, y: table.position.y + 0.425, fit: 0.72, poi: 'Bronze vessel (90% copper + 10% tin alloy)', metalness: 1, roughness: 0.35 });
+    await ctx.prop(PBR('nefertiti_bust.glb'), { x: 0.2, z: 0, y: table.position.y + 0.425, fit: 1.15, rotY: 0.15, poi: 'Bust of Queen Nefertiti (Sculptor Thutmose, Amarna, 1345 BCE) — museum scan' });
+    await ctx.prop('brass_pot_01', { x: -1.35, z: 0.1, y: table.position.y + 0.425, fit: 0.72, poi: 'Cast Bronze Vessel — trade connecting Cyprus copper & Afghanistan/Cornwall tin', metalness: 1, roughness: 0.35 });
     await ctx.prop('antique_ceramic_vase_01', { x: 1.45, z: 0.1, y: table.position.y + 0.425, fit: 0.85 });
     ctx.particles({ count: 300, box: [80, 8, 80], center: [0, 3, 0], color: 0xffe8c0, size: 0.06, speed: 0.2, direction: 1, sway: 1.4, opacity: 0.25 });
+    ctx.onWhatIf((on) => {
+      if (foundry.userData.melt) {
+        foundry.userData.melt.material.emissiveIntensity = on ? 6.5 : 2.8;
+      }
+      if (foundry.userData.furnaceLight) {
+        foundry.userData.furnaceLight.intensity = on ? 42 : 14;
+      }
+    });
   },
 
   /* ---------------- 20. Classical Greece ---------------- */
@@ -1289,7 +1354,7 @@ export const WORLD_BUILDERS = {
     const marble = await ctx.material('marble_01', { repeat: 2, displacementScale: 0.0, color: 0xf2eee4 });
     const temple = ARCH.createGreekTemple(marble, { position: [0, 0, -48], rotationY: Math.PI / 2 });
     ctx.group.add(temple);
-    ctx.poi('Parthenon — 8 × 17 Doric columns on the Athenian Acropolis (447 BCE)', temple, 16);
+    ctx.poi('Parthenon (Pericles, Phidias, Ictinus & Callicrates, 447–432 BCE) — 8 × 17 Doric columns on the Athenian Acropolis', temple, 16);
     await Promise.all([
       ctx.scatter('searsia_burchellii', { count: 14, minScale: 0.9, maxScale: 1.5, radius: 60, innerRadius: 14, seed: 141 }),
       ctx.scatter('wild_rooibos_bush', { count: 30, minScale: 0.8, maxScale: 1.4, radius: 55, innerRadius: 8, seed: 142 }),
@@ -1301,18 +1366,26 @@ export const WORLD_BUILDERS = {
     await spawnLivingHuman(ctx, {
       x: -1.4, z: -1.8, rotY: 0.8, height: 1.74, sex: 'male', style: 'greek',
       action: 'debate', tool: 'scroll',
-      poi: 'Athenian Philosopher (Socrates / Plato / Aristotle era) — debating ethics, logic & the cosmos',
+      poi: 'Socrates, Plato & Aristotle — Athenian Academy & Lyceum debating ethics, epistemology, logic & politics',
     });
     await spawnLivingHuman(ctx, {
       x: 1.2, z: -2.0, rotY: -0.9, height: 1.68, sex: 'female', style: 'greek',
       action: 'debate', tool: 'scroll',
-      poi: 'Greek Mathematician & Astronomer — Euclidean geometry & Eratosthenes measuring Earth’s circumference',
+      poi: 'Archimedes of Syracuse & Eratosthenes of Cyrene — deductive geometry, hydrostatics & measuring Earth’s 40,000 km circumference',
     });
     await spawnLivingHuman(ctx, {
       x: 0.0, z: -5.5, height: 1.75, sex: 'male', style: 'greek',
       action: 'walk', path: [[-4.5, -5.5], [4.5, -5.5]], speed: 0.9,
-      poi: 'Athenian Citizen walking to the Ecclesia (Direct Democracy Assembly)',
+      poi: 'Axial Age Global Contemporary — while Athens convened the Ecclesia, Buddha, Confucius & Cyrus the Great reshaped Asia',
     });
+
+    // 3D Antikythera Mechanism (c. 150–100 BCE geared bronze astronomical computer)
+    const antikythera = ARCH.createAntikytheraMechanism(ctx.anim, {
+      position: [0, ctx.terrain.heightAt(0, 1.2), 1.2],
+      rotationY: 0.15,
+    });
+    ctx.group.add(antikythera);
+    ctx.poi('Antikythera Mechanism (c. 100 BCE, Archimedes tradition) — 30+ interlocking bronze epicyclic gears predicting eclipses & Olympic cycles', antikythera, 1.8);
 
     const plinth = (x, z, h = 1.2) => {
       const p = new THREE.Mesh(new THREE.BoxGeometry(0.9, h, 0.9), marble);
@@ -1322,10 +1395,14 @@ export const WORLD_BUILDERS = {
       ctx.group.add(p);
       return p.position.y + h / 2;
     };
-    await ctx.prop('marble_bust_01', { x: -2.8, z: 1.5, y: plinth(-2.8, 1.5), fit: 0.95, rotY: 0.4, poi: 'Marble portrait bust — philosophy & democracy' });
-    await ctx.prop('horse_statue_01', { x: 2.8, z: 0.8, y: plinth(2.8, 0.8, 1.0), fit: 1.15, rotY: -0.5, poi: 'Bronze horse — Classical Greek sculpture' });
-    await ctx.prop('antique_ceramic_vase_01', { x: 0.2, z: 2.4, fit: 0.95, poi: 'Amphora — Mediterranean wine & olive-oil trade' });
+    await ctx.prop('marble_bust_01', { x: -2.8, z: 1.5, y: plinth(-2.8, 1.5), fit: 0.95, rotY: 0.4, poi: 'Classical Portrait Bust — Pericles, Herodotus & Hippocrates' });
+    await ctx.prop('horse_statue_01', { x: 2.8, z: 0.8, y: plinth(2.8, 0.8, 1.0), fit: 1.15, rotY: -0.5, poi: 'Hollow-cast Bronze Sculpture — Classical contrapposto realism' });
+    await ctx.prop('antique_ceramic_vase_01', { x: 0.2, z: 2.4, fit: 0.95, poi: 'Attic Red-Figure Amphora — Mediterranean maritime wine & olive-oil trade' });
     ctx.particles({ count: 200, box: [60, 8, 60], center: [0, 3, 0], color: 0xffffff, size: 0.04, speed: 0.1, direction: 1, sway: 1.0, opacity: 0.2, additive: true });
+    ctx.onWhatIf((on) => {
+      antikythera.userData.speedMultiplier = on ? 6.0 : 1.0;
+      marble.color.setHex(on ? 0xe8d0a8 : 0xf2eee4);
+    });
   },
 
   /* ---------------- 21. Roman Empire ---------------- */
@@ -1336,10 +1413,10 @@ export const WORLD_BUILDERS = {
     const travertine = await ctx.material('large_sandstone_blocks', { repeat: 1.2, displacementScale: 0.03, color: 0xe8dcc4 });
     const col = ARCH.createColosseum(travertine, { a: 50, b: 42, tiers: 3, position: [0, 0, -78] });
     ctx.group.add(col);
-    ctx.poi('Flavian Amphitheatre (Colosseum, 80 CE) — 50,000 spectators', col, 26);
+    ctx.poi('Flavian Amphitheatre (Colosseum, Emperors Vespasian & Titus, 80 CE) — travertine & volcanic pozzolana concrete seating 50,000', col, 26);
     const aq = ARCH.createAqueduct(travertine, { length: 140, arches: 18, h: 11, position: [-70, 0, -20], rotationY: Math.PI / 2.4 });
     ctx.group.add(aq);
-    ctx.poi('Roman Aqueduct — gravity-fed fresh water over 90 km', aq, 14);
+    ctx.poi('Roman Aqueduct (Pont du Gard / Aqua Appia tradition) — precision 1:3,000 gravity gradient delivering 1 million m³ of water daily', aq, 14);
     await Promise.all([
       ctx.scatter('searsia_burchellii', { count: 10, minScale: 1.0, maxScale: 1.6, radius: 70, innerRadius: 30, seed: 151 }),
       ctx.scatter('grass_medium_01', { count: 120, minScale: 0.8, maxScale: 1.3, radius: 70, innerRadius: 34, seed: 152, tint: 0xa9a860 }),
@@ -1350,18 +1427,18 @@ export const WORLD_BUILDERS = {
       x: -1.8, z: -2.5, height: 1.76, sex: 'male', style: 'roman',
       hat: 'helmet', action: 'walk', tool: 'shield_sword',
       path: [[-5.0, -3.5], [3.5, -2.0]], speed: 1.0,
-      poi: 'Roman Legionary Centurion — patrolling 80,000 km of paved imperial highways',
+      poi: 'Roman Centurion (Julius Caesar, Augustus & Trajan era) — lorica segmentata armor along 80,000 km of Via Romana highways',
     });
     await spawnLivingHuman(ctx, {
       x: 1.6, z: -0.5, rotY: -0.5, height: 1.74, sex: 'male', style: 'roman',
       action: 'debate', tool: 'scroll',
-      poi: 'Roman Senator & Jurist — codifying Roman civil law & engineering projects',
+      poi: 'Emperor Marcus Aurelius, Cicero & Vitruvius — Stoic philosophy, Corpus Juris Civilis law & architectural engineering',
     });
     await spawnLivingHuman(ctx, {
       x: -0.4, z: -5.2, height: 1.68, sex: 'female', style: 'roman',
       action: 'walk', tool: 'jug',
       path: [[4.5, -6.0], [-4.5, -5.0]], speed: 0.9,
-      poi: 'Silk Road Trader — connecting Chang’an (Han China), Persia, India & Rome',
+      poi: 'Eurasian Silk Road Envoy (Zhang Qian, Sima Qian & Cai Lun era) — linking Han Dynasty Chang’an (paper & silk) with Imperial Rome (glass & gold)',
     });
 
     const marble = await ctx.material('marble_01', { repeat: 2, displacementScale: 0, color: 0xf0ebe0 });
@@ -1373,10 +1450,21 @@ export const WORLD_BUILDERS = {
       ctx.group.add(p);
       return p.position.y + h / 2;
     };
-    await ctx.prop('marble_bust_01', { x: -3.2, z: 2, y: plinth(-3.2, 2), rotY: 0.3, poi: 'Imperial portrait bust' });
-    await ctx.prop('lion_head', { x: 3.2, z: 1.5, y: plinth(3.2, 1.5, 1.0), rotY: -0.4, fit: 0.8, poi: 'Lion-head relief — arena beasts & Silk Road trade' });
+    await ctx.prop('marble_bust_01', { x: -3.2, z: 2, y: plinth(-3.2, 2), rotY: 0.3, poi: 'Imperial Portrait Bust — Augustus Caesar & Pax Romana (27 BCE – 180 CE)' });
+    await ctx.prop('lion_head', { x: 3.2, z: 1.5, y: plinth(3.2, 1.5, 1.0), rotY: -0.4, fit: 0.8, poi: 'Roman & Parthian Trade Relief — Galen’s medical treatises & Mediterranean commerce' });
     await ctx.prop('bull_head', { x: 0.5, z: 3.2, y: plinth(0.5, 3.2, 0.9), rotY: 0.1, fit: 0.8 });
+    // Shimmering Naumachia / Aqueduct hydraulic channel (toggled by What-If)
+    const naumachia = new THREE.Mesh(
+      new THREE.CircleGeometry(14, 48),
+      new THREE.MeshStandardMaterial({ color: 0x2a7fa8, emissive: 0x0e4466, emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.8, transparent: true, opacity: 0.0 })
+    );
+    naumachia.rotation.x = -Math.PI / 2;
+    naumachia.position.set(0, 0.08, -78);
+    ctx.group.add(naumachia);
     ctx.particles({ count: 200, box: [80, 8, 80], center: [0, 3, 0], color: 0xfff4e0, size: 0.05, speed: 0.1, direction: 1, sway: 1.2, opacity: 0.2, additive: true });
+    ctx.onWhatIf((on) => {
+      naumachia.material.opacity = on ? 0.85 : 0.0;
+    });
   },
 
   /* ---------------- 22. Medieval & Renaissance ---------------- */
@@ -1388,7 +1476,7 @@ export const WORLD_BUILDERS = {
     const slate = await ctx.material('rock_face', { repeat: 4, displacementScale: 0.0, color: 0x3a4048 });
     const castle = ARCH.createCastle(blocks, slate, { size: 40, wallH: 10, towerR: 4.5, towerH: 16, position: [0, 0, -52] });
     ctx.group.add(castle);
-    ctx.poi('Stone castle — curtain walls, keep & gatehouse (1200 CE)', castle, 34);
+    ctx.poi('Concentric Stone Castle — curtain walls, crenellated keep & gatehouse (1200 CE)', castle, 34);
     const moat = await ctx.water({ size: 200, y: -0.6, color: 0x1e3f3a, distortion: 1.4 });
     moat.position.z = -52;
     await Promise.all([
@@ -1402,34 +1490,45 @@ export const WORLD_BUILDERS = {
       x: -1.8, z: -2.2, height: 1.76, sex: 'male', style: 'medieval',
       hat: 'helmet', action: 'walk', tool: 'shield_sword',
       path: [[-4.2, -3.0], [2.4, -2.2]], speed: 0.95,
-      poi: 'Medieval Knight — patrolling the castle bailey in steel helm & kite shield',
+      poi: 'High Medieval Knight (Magna Carta 1215 & Crusades era) — patrolling the castle bailey',
     });
     await spawnLivingHuman(ctx, {
       x: 1.8, z: 0.8, rotY: -0.7, height: 1.72, sex: 'male', style: 'medieval',
       action: 'debate', tool: 'scroll',
-      poi: 'Renaissance & Golden Age Scholar — translating algebra, optics & printing Gutenberg movable type',
+      poi: 'Golden Age & Scientific Revolution Polymath (Al-Khwarizmi, Ibn al-Haytham, Leonardo da Vinci, Copernicus, Galileo & Newton)',
     });
     await spawnLivingHuman(ctx, {
       x: -2.4, z: 1.6, rotY: 0.8, height: 1.66, sex: 'female', style: 'medieval',
       action: 'knap', tool: 'hammer',
-      poi: 'Medieval Guild Artisan — spinning textiles & forging ironwork',
+      poi: 'Master Printer & Navigator (Bi Sheng, Johannes Gutenberg 1450 & Zheng He / Columbus / Magellan maritime age)',
     });
+
+    // Gutenberg Wooden Screw Printing Press (1450 CE) + Islamic Golden Age Brass Astrolabe
+    const press = ARCH.createGutenbergPressAndAstrolabe(ctx.anim, {
+      position: [3.2, ctx.terrain.heightAt(3.2, -0.4), -0.4],
+      rotationY: -0.5,
+    });
+    ctx.group.add(press);
+    ctx.poi('Gutenberg Movable-Type Printing Press (Mainz, 1450 CE) & Islamic Golden Age Brass Astrolabe (Al-Khwarizmi / Ibn al-Haytham)', press, 2.4);
 
     // Armoury table with real scanned medieval arms
     await ctx.prop('wooden_crate_01', { x: 0, z: 0.5, rotY: 0.2 });
     const tableTop = ctx.terrain.heightAt(0, 0.5) + 0.62;
-    await ctx.prop('kite_shield', { x: -0.9, z: 0.1, y: tableTop, rotY: 0.6, poi: 'Kite shield' });
+    await ctx.prop('kite_shield', { x: -0.9, z: 0.1, y: tableTop, rotY: 0.6, poi: 'Norman Kite Shield' });
     await ctx.prop('ornate_medieval_mace', { x: 0.2, z: 0.3, y: tableTop, rotY: 1.3 });
-    await ctx.prop('antique_estoc', { x: 0.6, z: 0.7, y: tableTop, rotY: -0.8, poi: 'Estoc — armour-piercing sword' });
+    await ctx.prop('antique_estoc', { x: 0.6, z: 0.7, y: tableTop, rotY: -0.8, poi: 'Estoc — plate-armour piercing sword' });
     await ctx.prop('ornate_war_hammer', { x: -0.2, z: 0.9, y: tableTop, rotY: 2.2 });
-    await ctx.prop(PBR('chess_set.glb'), { x: 2.6, z: 1.2, y: ctx.terrain.heightAt(2.6, 1.2) + 0.8, fit: 0.75, rotY: 0.4, poi: 'Chess — reached Europe via Persia & al-Andalus (~1000 CE)' });
+    await ctx.prop(PBR('chess_set.glb'), { x: 2.6, z: 1.2, y: ctx.terrain.heightAt(2.6, 1.2) + 0.8, fit: 0.75, rotY: 0.4, poi: 'Shatranj / Chess — transmitted from Gupta India via Abbasid Persia & al-Andalus to Europe (~1000 CE)' });
     await ctx.prop('wine_barrel_01', { x: 2.6, z: 1.2 });
     await ctx.prop('wooden_barrels_01', { x: -3.4, z: -1.2, rotY: 0.5 });
-    await ctx.prop('gothic_statue', { x: 3.6, z: -2.6, rotY: -0.6, poi: 'Gothic sculpture — cathedral age' });
-    await ctx.prop('spinning_wheel_01', { x: -3.2, z: 2.4, rotY: 0.9, poi: 'Spinning wheel — medieval textile tech' });
+    await ctx.prop('gothic_statue', { x: 3.6, z: -2.6, rotY: -0.6, poi: 'Gothic & Renaissance Sculpture — flying buttresses to Brunelleschi’s Dome' });
+    await ctx.prop('spinning_wheel_01', { x: -3.2, z: 2.4, rotY: 0.9, poi: 'Spinning wheel — medieval guild textile automation' });
     await ctx.prop('Lantern_01', { x: 1.6, z: -1.6, poi: null });
     await ctx.prop('wooden_candlestick', { x: 1.1, z: 1.9, fit: 0.4 });
     ctx.particles({ count: 200, box: [60, 8, 60], center: [0, 3, 0], color: 0xffffff, size: 0.04, speed: 0.1, direction: 1, sway: 1.0, opacity: 0.2, additive: true });
+    ctx.onWhatIf((on) => {
+      press.userData.active = on;
+    });
   },
 
   /* ---------------- 23. First Industrial Revolution ---------------- */
@@ -1444,16 +1543,17 @@ export const WORLD_BUILDERS = {
     const wood = await ctx.material('rock_boulder_dry', { repeat: 2, displacementScale: 0, color: 0x5a3f28 });
     const mill = ARCH.createFactory(brick, iron, { position: [-6, 0, -34], rotationY: 0.1 });
     ctx.group.add(mill);
-    ctx.poi('Textile mill — coal, iron & steam (1780s)', mill, 14);
+    ctx.poi('Mechanised Textile Mill (Richard Arkwright & James Watt, 1776) — separate-condenser steam engines replacing muscle power', mill, 14);
     ctx.smoke({ count: 28, scale: 5, rise: 40, start: [-20, 30, -40], opacity: 0.28, color: 0x3a3634, speed: 0.22, spread: 3 });
     ctx.smoke({ count: 28, scale: 5, rise: 40, start: [6, 30, -40], opacity: 0.28, color: 0x3a3634, speed: 0.2, spread: 3 });
     const rail = ARCH.createRailway(ironDark, wood, { length: 160, position: [0, 0, 0], rotationY: 0.25 });
     ctx.group.add(rail);
     const loco = ARCH.createSteamLocomotive(ironDark, brass, ctx.anim, { position: [0, 0, 0], rotationY: 0.25 });
     ctx.group.add(loco);
-    ctx.poi('Steam locomotive — Stephenson’s Rocket era (1829) chugging along iron rails', loco, 5);
+    ctx.poi('Stephenson’s Rocket Steam Locomotive (George & Robert Stephenson, 1829) — 48 km/h along the Liverpool & Manchester Railway', loco, 5);
+    let locoSpeed = 0.45;
     ctx.anim.push((t) => {
-      const d = Math.sin(t * 0.45) * 3.5;
+      const d = Math.sin(t * locoSpeed) * 4.5;
       loco.position.x = Math.sin(0.25) * d;
       loco.position.z = Math.cos(0.25) * d;
     });
@@ -1463,21 +1563,24 @@ export const WORLD_BUILDERS = {
     await spawnLivingHuman(ctx, {
       x: 4.2, z: 3.8, rotY: -0.8, height: 1.74, sex: 'male', style: 'industrial',
       hat: 'cap', action: 'harvest', tool: 'shovel',
-      poi: 'Steam Railway Stoker — shoveling bituminous coal to boil high-pressure steam',
+      poi: 'Steam Engineer (James Watt & Sadi Carnot thermodynamics era) — firing bituminous coal to drive high-pressure pistons',
     });
     await spawnLivingHuman(ctx, {
       x: -3.2, z: 3.2, height: 1.75, sex: 'male', style: 'industrial',
       hat: 'cap', action: 'walk', tool: 'hammer',
       path: [[-4.8, 2.0], [-2.0, 5.5]], speed: 0.95,
-      poi: 'Industrial Railway Engineer — inspecting rolled wrought-iron rails & steam pistons',
+      poi: 'Analytical & Electromagnetic Pioneer (Michael Faraday 1831 dynamo, Charles Babbage & Ada Lovelace 1843 Analytical Engine)',
     });
 
     await ctx.prop('wooden_crate_01', { x: -6, z: 4, rotY: 0.3 });
     await ctx.prop('wooden_barrels_01', { x: -8, z: 5, rotY: 0.8 });
     await ctx.prop('sledgehammer_01', { x: -5.2, z: 5.6, rotY: 1.2 });
-    await ctx.prop(PBR('pot_of_coals.glb'), { x: 5.5, z: 4.5, fit: 0.9, poi: 'Coal — the fossil fuel of the Industrial Revolution' });
-    await ctx.prop('street_lamp_01', { x: 7, z: -2, poi: 'Gas street lamp (1807)' });
+    await ctx.prop(PBR('pot_of_coals.glb'), { x: 5.5, z: 4.5, fit: 0.9, poi: 'Carboniferous Coal — ancient buried swamp forests fueling the Industrial Revolution (CO₂ passes 280 ppm)' });
+    await ctx.prop('street_lamp_01', { x: 7, z: -2, poi: 'Coal-gas street lamp (London, 1807)' });
     ctx.particles({ count: 500, box: [80, 20, 80], center: [0, 8, 0], color: 0x4a4440, size: 0.08, speed: 0.15, direction: -1, sway: 0.8, opacity: 0.5 });
+    ctx.onWhatIf((on) => {
+      locoSpeed = on ? 1.35 : 0.45;
+    });
   },
 
   /* ---------------- 24. Second Industrial Revolution ---------------- */
@@ -1489,25 +1592,35 @@ export const WORLD_BUILDERS = {
     const wood = await ctx.material('rock_boulder_dry', { repeat: 2, displacementScale: 0, color: 0x5a3f28 });
     ctx.group.add(ARCH.createRailway(ironDark, wood, { length: 160, position: [10, 0, 0], rotationY: 0.1 }));
     // electric street lamps (real scan) with warm point lights
+    const streetLights = [];
     for (const [x, z] of [[-5, 2], [-5, -10], [6, -6], [6, 6]]) {
       const lamp = await ctx.prop('street_lamp_01', { x, z });
       const pl = new THREE.PointLight(0xffd9a0, 90, 26, 1.7);
       pl.position.set(x, 4.6, z);
       pl.castShadow = false;
       ctx.group.add(pl);
-      if (x === -5 && z === 2 && lamp) ctx.poi('Electric arc lamp — cities lit at night (1880s)', lamp, 5.2);
+      streetLights.push(pl);
+      if (x === -5 && z === 2 && lamp) ctx.poi('Electric street lighting — Bessemer steel & AC/DC grids illuminate the night (1880s)', lamp, 5.2);
     }
     await spawnLivingHuman(ctx, {
       x: -2.0, z: -2.5, height: 1.75, sex: 'male', style: 'industrial',
       hat: 'cap', action: 'walk', tool: 'scroll',
       path: [[-4.2, -4.5], [3.5, -1.8]], speed: 0.9,
-      poi: 'Electrical Engineer (Edison / Tesla era) — AC/DC power grids & telegraph networks',
+      poi: 'Nikola Tesla & Thomas Edison — polyphase alternating current (AC) vs. direct current (DC) electrification & Wright Brothers (1903)',
     });
     await spawnLivingHuman(ctx, {
       x: 1.8, z: 2.2, rotY: -0.6, height: 1.68, sex: 'female', style: 'industrial',
       action: 'debate',
-      poi: 'Early 20th-Century Scientist — germ theory, X-rays & photography',
+      poi: 'Marie Skłodowska-Curie & Louis Pasteur — radioactivity (polonium & radium), germ theory, vaccines & Haber-Bosch synthesis',
     });
+
+    // Nikola Tesla Polyphase AC Induction & High-Voltage Coil
+    const teslaCoil = ARCH.createTeslaCoil(ctx.anim, {
+      position: [-3.4, ctx.terrain.heightAt(-3.4, -1.6), -1.6],
+    });
+    ctx.group.add(teslaCoil);
+    ctx.poi('Nikola Tesla High-Voltage AC Coil & Polyphase Transformer (1888–1891) — long-distance alternating-current power transmission', teslaCoil, 2.2);
+
     // Edison bulb exhibit: glass envelope (transmission) + glowing carbon filament
     const bulbBase = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.22, 24), new THREE.MeshStandardMaterial({ color: 0xb08d57, roughness: 0.4, metalness: 1 }));
     const bulbGlass = new THREE.Mesh(new THREE.SphereGeometry(0.26, 48, 32), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, metalness: 0, transmission: 0.95, thickness: 0.05, ior: 1.5, transparent: true }));
@@ -1526,12 +1639,13 @@ export const WORLD_BUILDERS = {
     bulb.position.set(0, stand.position.y + 0.55, 0);
     bulb.scale.setScalar(2.2);
     ctx.group.add(bulb);
-    ctx.poi('Edison carbon-filament bulb (1879)', bulb, 1.6);
+    ctx.poi('Edison High-Resistance Carbon-Filament Incandescent Lamp (Menlo Park, 1879)', bulb, 1.6);
+    let gridBoost = 1.0;
     ctx.anim.push((t) => {
-      filament.material.emissiveIntensity = 5.2 + 0.8 * Math.sin(t * 17) * Math.sin(t * 3.1);
+      filament.material.emissiveIntensity = (5.2 + 0.8 * Math.sin(t * 17) * Math.sin(t * 3.1)) * gridBoost;
     });
-    await ctx.prop(PBR('antique_camera.glb'), { x: 2.4, z: 1.2, fit: 0.8, rotY: -0.5, poi: 'Photography — bellows camera' });
-    await ctx.prop('vintage_microscope', { x: -2.4, z: 1.0, fit: 0.6, rotY: 0.5, poi: 'Brass microscope — germ theory & medicine' });
+    await ctx.prop(PBR('antique_camera.glb'), { x: 2.4, z: 1.2, fit: 0.8, rotY: -0.5, poi: 'Silver-halide Photography & Cinema (Lumière / Eastman)' });
+    await ctx.prop('vintage_microscope', { x: -2.4, z: 1.0, fit: 0.6, rotY: 0.5, poi: 'Compound Microscope — Louis Pasteur & Robert Koch’s germ theory of disease' });
     await ctx.prop('wooden_crate_01', { x: 2.4, z: 1.2 });
     await ctx.prop('wooden_crate_01', { x: -2.4, z: 1.0 });
     // telegraph poles + wires
@@ -1558,6 +1672,12 @@ export const WORLD_BUILDERS = {
     const wire = new THREE.Line(new THREE.BufferGeometry().setFromPoints(wirePts), new THREE.LineBasicMaterial({ color: 0x111111 }));
     ctx.group.add(wire);
     ctx.particles({ count: 300, box: [60, 10, 60], center: [0, 4, 0], color: 0xffe8c0, size: 0.04, speed: 0.1, direction: 1, sway: 0.8, opacity: 0.25, additive: true });
+    ctx.onWhatIf((on) => {
+      gridBoost = on ? 2.2 : 1.0;
+      teslaCoil.userData.overcharge = on;
+      bulbLight.intensity = on ? 65 : 30;
+      streetLights.forEach((pl) => { pl.intensity = on ? 160 : 90; });
+    });
   },
 
   /* ---------------- 25. Computers & the Moon landing ---------------- */
@@ -1585,15 +1705,44 @@ export const WORLD_BUILDERS = {
       ctx.scatter('moon_rock_03', { count: 70, minScale: 0.4, maxScale: 1.5, radius: 60, innerRadius: 3, seed: 173 }),
       ctx.scatter('moon_rock_05', { count: 60, minScale: 0.4, maxScale: 1.4, radius: 60, innerRadius: 3, seed: 174 }),
     ]);
-    const lm = ARCH.createLunarModule({ position: [-4, ctx.terrain.heightAt(-4, -6), -6], rotationY: 0.4 });
+    const lmY = ctx.terrain.heightAt(-4, -6);
+    const lm = ARCH.createLunarModule({ position: [-4, lmY, -6], rotationY: 0.4 });
     ctx.group.add(lm);
-    ctx.poi('Apollo 11 Lunar Module "Eagle" — 20 July 1969', lm, 5.2);
-    await ctx.prop(PBR('neil_armstrong_spacesuit_smithsonian.glb'), { x: 1.2, z: 0.5, fit: 1.9, rotY: -0.4, poi: 'Neil Armstrong’s A7-L suit — Smithsonian 3D scan' });
-    await ctx.prop(PBR('astronaut.glb'), { x: 4.0, z: -1.5, fit: 1.85, rotY: -0.6, poi: 'Buzz Aldrin on the lunar surface' });
-    await ctx.prop('vintage_spacecraft_instrument', { x: -1.5, z: 2.6, fit: 0.75, rotY: 0.3, poi: 'Apollo Guidance Computer era — 4 KB of RAM flew to the Moon' });
+    ctx.poi('Apollo 11 Lunar Module "Eagle" — Sea of Tranquility, 20 July 1969 (Armstrong, Aldrin & Collins)', lm, 5.2);
+    await ctx.prop(PBR('neil_armstrong_spacesuit_smithsonian.glb'), { x: 1.2, z: 0.5, fit: 1.9, rotY: -0.4, poi: 'Neil Armstrong’s A7-L spacesuit — Smithsonian 3D scan ("One small step for [a] man...")' });
+    await ctx.prop(PBR('astronaut.glb'), { x: 4.0, z: -1.5, fit: 1.85, rotY: -0.6, poi: 'Buzz Aldrin on Mare Tranquillitatis — orbital mechanics by Katherine Johnson' });
+    await ctx.prop('vintage_spacecraft_instrument', { x: -1.5, z: 2.6, fit: 0.75, rotY: 0.3, poi: 'Apollo Guidance Computer (Margaret Hamilton flight software; Alan Turing, John von Neumann & Claude Shannon architecture)' });
+
+    // Apollo 11 Lunar Laser Ranging Retroreflector Array (still active today!)
+    const retro = ARCH.createApolloRetroreflector({
+      position: [2.4, ctx.terrain.heightAt(2.4, 2.2), 2.2],
+      rotationY: -0.35,
+    });
+    ctx.group.add(retro);
+    ctx.poi('Apollo 11 Lunar Laser Ranging Retroreflector — 100 fused-silica corner cubes measuring Moon’s 3.8 cm/yr recession & testing Einstein’s General Relativity', retro, 0.9);
+
     addFootprintTrail(ctx, { from: [2, 0, 3], to: [1.2, 0, 0.8], steps: 6, size: 0.3, color: 0x55554f });
+
+    // Descent engine plume + green Earth-to-Moon laser ranging beam for What-If toggle (never hiding the Lunar Module!)
+    const plume = new THREE.Mesh(
+      new THREE.ConeGeometry(1.3, 2.2, 24, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0x70d6ff, transparent: true, opacity: 0.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    plume.position.set(-4, lmY + 0.9, -6);
+    ctx.group.add(plume);
+    const laserGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(2.4, ctx.terrain.heightAt(2.4, 2.2) + 0.2, 2.2),
+      new THREE.Vector3(28, 22, -135),
+    ]);
+    const laserBeam = new THREE.Line(
+      laserGeo,
+      new THREE.LineBasicMaterial({ color: 0x38ff7a, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending })
+    );
+    ctx.group.add(laserBeam);
     ctx.onWhatIf((on) => {
-      lm.visible = !on;
+      lm.visible = true;
+      plume.material.opacity = on ? 0.78 : 0.0;
+      laserBeam.material.opacity = on ? 0.88 : 0.0;
     });
   },
 
@@ -1613,15 +1762,28 @@ export const WORLD_BUILDERS = {
       leg.position.set(x, 0.475, z);
       ctx.group.add(leg);
     });
-    await ctx.prop('classic_laptop', { x: -1.4, z: 0, y: 1.0, fit: 0.7, rotY: 0.25, poi: 'Personal computer — the Web arrives (1991)' });
-    await ctx.prop('television_02', { x: 1.6, z: -0.3, y: 1.0, rotY: -0.3, fit: 0.9, poi: 'CRT monitor' });
+    await ctx.prop('classic_laptop', { x: -1.4, z: 0, y: 1.0, fit: 0.7, rotY: 0.25, poi: 'Personal Computing & World Wide Web — Tim Berners-Lee (1989–1991 CERN HTTP/HTML) & Linus Torvalds (Linux)' });
+    await ctx.prop('television_02', { x: 1.6, z: -0.3, y: 1.0, rotY: -0.3, fit: 0.9, poi: 'Microprocessor Workstation — Intel 4004, Dennis Ritchie & Ken Thompson (Unix/C)' });
     const phone = ARCH.createSmartphone({ position: [0.3, 1.0 + 0.46, 0.4], scale: 8, rotationY: 0.2 });
     phone.rotation.x = -0.1;
     ctx.group.add(phone);
-    ctx.poi('iPhone (2007) — shown at 8× size', phone, 0.6);
+    ctx.poi('iPhone (Steve Jobs, 2007) — capacitive multi-touch glass computer in 5 billion pockets (8× scale)', phone, 0.6);
     ctx.anim.push((t) => {
       phone.rotation.y = 0.2 + Math.sin(t * 0.5) * 0.5;
     });
+
+    // Living Digital Pioneers debating packet switching & mobile computing!
+    await spawnLivingHuman(ctx, {
+      x: -2.6, z: -1.6, rotY: 0.6, height: 1.75, sex: 'male', style: 'industrial',
+      action: 'debate',
+      poi: 'Internet & Web Architect (Vint Cerf, Bob Kahn & Sir Tim Berners-Lee) — TCP/IP packet switching & the World Wide Web',
+    });
+    await spawnLivingHuman(ctx, {
+      x: 2.2, z: -1.8, rotY: -0.5, height: 1.76, sex: 'male', style: 'industrial',
+      action: 'walk', path: [[1.6, -2.2], [3.6, -1.2]], speed: 0.9,
+      poi: 'Personal Computer & Smartphone Pioneer (Steve Jobs, Steve Wozniak & Bill Gates era)',
+    });
+
     // networked Earth: real NASA night lights + great-circle data arcs
     const earth = new THREE.Mesh(new THREE.SphereGeometry(0.9, 64, 48), new THREE.MeshStandardMaterial({ map: ctx.textures.earthDay || null, emissiveMap: ctx.textures.earthNight || null, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.7 }));
     earth.position.set(3.4, 2.2, 1.6);
@@ -1637,15 +1799,21 @@ export const WORLD_BUILDERS = {
       arcGroup.add(line);
     }
     earth.add(arcGroup);
-    ctx.poi('The Internet — billions connected', earth, 1.2);
+    ctx.poi('Global TCP/IP Fiber-Optic & Satellite Internet — 5.5 billion connected humans', earth, 1.2);
+    let earthSpin = 0.12;
     ctx.anim.push((t) => {
-      earth.rotation.y = t * 0.12;
+      earth.rotation.y = t * earthSpin;
     });
     await ctx.prop('street_lamp_01', { x: -5, z: -4 });
     const pl = new THREE.PointLight(0xffe0b0, 60, 20, 1.7);
     pl.position.set(-5, 4.6, -4);
     ctx.group.add(pl);
     ctx.particles({ count: 200, box: [40, 8, 40], center: [0, 3, 0], color: 0xbfe0ff, size: 0.04, speed: 0.1, direction: 1, sway: 0.6, opacity: 0.25, additive: true });
+    ctx.onWhatIf((on) => {
+      earthSpin = on ? 0.55 : 0.12;
+      earth.material.emissiveIntensity = on ? 2.0 : 0.9;
+      arcGroup.scale.setScalar(on ? 1.08 : 1.0);
+    });
   },
 
   /* ---------------- 27. AI, robotics & today (2026) ---------------- */
@@ -1654,17 +1822,23 @@ export const WORLD_BUILDERS = {
     ctx.setCamera({ distance: 8.5, pitch: 0.09, targetY: 1.35, yaw: 0.12 });
     await ctx.ground('metal_plate', { repeat: 20, amplitude: 0, frequency: 0.05, displacementScale: 0.02, flatRadius: 40, color: 0x8a9098 });
     ctx.group.add(ARCH.createCityTowers(ctx.anim, { count: 26, ring: [45, 95], seed: 11, minH: 20, maxH: 70 }));
-    const xbot = await ctx.prop(PBR('xbot_robot.glb'), { x: 1.5, z: 0.3, fit: 1.85, rotY: -0.45, clip: 'walk', timeScale: 0.9, poi: 'Humanoid robot — rigged & animated (2026)' });
+    const xbot = await ctx.prop(PBR('xbot_robot.glb'), { x: 1.5, z: 0.3, fit: 1.85, rotY: -0.45, clip: 'walk', timeScale: 0.9, poi: 'Embodied Humanoid Robot (2026) — multimodal vision-language-action foundation models' });
     if (xbot) ctx.anim.push((t) => {
       xbot.rotation.y = -0.45 + Math.sin(t * 0.3) * 0.25;
     });
-    await ctx.prop(PBR('robot_expressive.glb'), { x: -1.8, z: -0.4, fit: 1.45, rotY: 0.5, clip: 'Wave', timeScale: 0.9, poi: 'Autonomous embodied AI agent' });
-    const dna = await ctx.prop(PBR('dna_helix.glb'), { x: -3.2, z: 0.8, y: 0.3, fit: 1.9, rotY: 0.3, poi: 'CRISPR gene editing & AlphaFold protein design' });
+    await ctx.prop(PBR('robot_expressive.glb'), { x: -1.8, z: -0.4, fit: 1.45, rotY: 0.5, clip: 'Wave', timeScale: 0.9, poi: 'Autonomous Agentic AI Collaborator — planning, reasoning & tool execution' });
+    const dna = await ctx.prop(PBR('dna_helix.glb'), { x: -3.2, z: 0.8, y: 0.3, fit: 1.9, rotY: 0.3, poi: 'CRISPR-Cas9 Gene Editing (Doudna & Charpentier) & AlphaFold Protein Structure Prediction (Hassabis & Jumper)' });
+    let dnaSpin = 0.45;
     if (dna) ctx.anim.push((t) => {
-      dna.rotation.y = t * 0.45;
+      dna.rotation.y = t * dnaSpin;
+    });
+    await spawnLivingHuman(ctx, {
+      x: 2.6, z: -1.4, rotY: -0.6, height: 1.72, sex: 'female', style: 'industrial',
+      action: 'debate',
+      poi: 'AI & Biotech Researcher (Hinton, Hopfield, Bengio, LeCun, Vaswani et al. 2017 Transformer & Karikó mRNA era)',
     });
     FX.createNeuralHologram(ctx.group, ctx.anim, { position: [0, 2.2, -2.8], layers: [6, 12, 12, 6] });
-    ctx.poi('Transformer neural network — trillions of parameters', new THREE.Vector3(0, 3.8, -2.8));
+    ctx.poi('Transformer Self-Attention Neural Architecture (Vaswani et al., 2017) — trillions of parameters & JWST era', new THREE.Vector3(0, 3.8, -2.8));
     await ctx.prop('classic_laptop', { x: -0.4, z: 1.5, y: 0.0, fit: 0.65, rotY: 0.4 });
     const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.03, 8, 128), new THREE.MeshBasicMaterial({ color: 0x5ad7ff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending }));
     ring.rotation.x = Math.PI / 2;
@@ -1675,6 +1849,11 @@ export const WORLD_BUILDERS = {
     keyLight.castShadow = true;
     ctx.group.add(keyLight, keyLight.target);
     ctx.particles({ count: 300, box: [30, 8, 30], center: [0, 3, 0], color: 0x9fd8ff, size: 0.035, speed: 0.15, direction: 1, sway: 0.4, opacity: 0.35, additive: true });
+    ctx.onWhatIf((on) => {
+      dnaSpin = on ? 1.8 : 0.45;
+      ring.material.color.setHex(on ? 0xffc857 : 0x5ad7ff);
+      ring.scale.setScalar(on ? 1.25 : 1.0);
+    });
   },
 
   /* ---------------- 28. Solarpunk 2050 ---------------- */
@@ -1688,18 +1867,40 @@ export const WORLD_BUILDERS = {
       ctx.scatter('jacaranda_tree', { count: 7, minScale: 0.9, maxScale: 1.3, radius: 60, innerRadius: 16, seed: 183, wind: { amp: 0.07, speed: 0.6, height: 10 } }),
       ctx.scatter('tree_small_02', { count: 8, minScale: 0.9, maxScale: 1.3, radius: 60, innerRadius: 16, seed: 184 }),
     ]);
-    const dome = ARCH.createBiodome({ position: [0, ctx.terrain.heightAt(0, -12), -12], radius: 9 });
+    const domeY = ctx.terrain.heightAt(0, -12);
+    const dome = ARCH.createBiodome({ position: [0, domeY, -12], radius: 9 });
     ctx.group.add(dome);
-    ctx.poi('Fusion-powered biodome habitat', dome, 10);
+    ctx.poi('Net-Zero Arcology Biodome & Direct-Air Carbon Capture Habitat (2050)', dome, 10);
+
+    // Glowing Tokamak Magnetic-Confinement D-T Fusion Plasma Torus inside the energy pavilion
+    const fusionTorus = new THREE.Mesh(
+      new THREE.TorusGeometry(1.4, 0.32, 24, 64),
+      new THREE.MeshStandardMaterial({ color: 0x4ae8ff, emissive: 0x22b8ff, emissiveIntensity: 3.2, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.88 })
+    );
+    fusionTorus.rotation.x = Math.PI / 2;
+    fusionTorus.position.set(4.6, ctx.terrain.heightAt(4.6, -2.0) + 1.4, -2.0);
+    ctx.group.add(fusionTorus);
+    ctx.poi('Commercial D-T Magnetic-Confinement Fusion Reactor — 100 million °C plasma ring & solid-state grid storage', fusionTorus, 2.0);
+
+    await spawnLivingHuman(ctx, {
+      x: 2.2, z: -1.4, rotY: -0.4, height: 1.73, sex: 'female', style: 'industrial',
+      action: 'debate',
+      poi: '2050 Climate & Fusion Engineer — managing gigaton direct-air carbon capture & rewilded biosphere corridors',
+    });
+
     const inner = await ctx.prop('island_tree_02', { x: 0, z: -12, scale: 0.55 });
     void inner;
     await ctx.prop(PBR('plant_leaves.glb'), { x: 3, z: -8, fit: 1.6 });
     [[-34, -30], [-48, 10], [40, -42], [52, 4], [-20, -70]].forEach(([x, z]) => ctx.group.add(ARCH.createWindTurbine(ctx.anim, { position: [x, ctx.terrain.heightAt(x, z), z] })));
     ctx.group.add(ARCH.createSolarArray({ position: [18, ctx.terrain.heightAt(18, 6), 6], rows: 4, cols: 8, rotationY: 0.3 }));
-    await ctx.prop(PBR('robot_expressive.glb'), { x: -2.5, z: 1.5, fit: 1.4, rotY: 0.6, clip: 'Walking', poi: 'Garden-tending ecological robot' });
+    await ctx.prop(PBR('robot_expressive.glb'), { x: -2.5, z: 1.5, fit: 1.4, rotY: 0.6, clip: 'Walking', poi: 'Autonomous Ecological Restoration Robot — precision agroecology & pollinator support' });
     const pond = await ctx.water({ size: 18, y: -0.25, color: 0x2a6f6a, distortion: 0.8 });
     pond.position.set(10, -0.25, 10);
     ctx.particles({ count: 260, box: [60, 8, 60], center: [0, 3, 0], color: 0xfff6d0, size: 0.05, speed: 0.15, direction: 1, sway: 1.2, opacity: 0.3, additive: true });
+    ctx.onWhatIf((on) => {
+      fusionTorus.material.emissiveIntensity = on ? 7.5 : 3.2;
+      fusionTorus.scale.setScalar(on ? 1.25 : 1.0);
+    });
   },
 
   /* ---------------- 29. Mars 2150 ---------------- */
@@ -1727,10 +1928,11 @@ export const WORLD_BUILDERS = {
     const d1 = ARCH.createBiodome({ position: [-10, ctx.terrain.heightAt(-10, -14), -14], radius: 10, tint: 0xd8ecff });
     const d2 = ARCH.createBiodome({ position: [8, ctx.terrain.heightAt(8, -22), -22], radius: 7, tint: 0xd8ecff });
     ctx.group.add(d1, d2);
-    ctx.poi('Terraforming biodome — Earth plants under Martian sky', d1, 11);
+    ctx.poi('Pressurized Martian Regolith-Shielded Biodome — hydroponic closed-loop agriculture at 0.38 g', d1, 11);
     await ctx.prop('island_tree_01', { x: -10, z: -14, scale: 0.5 });
     await ctx.prop('fern_02', { x: -7, z: -11, scale: 1.4 });
-    await ctx.prop(PBR('astronaut.glb'), { x: 1.5, z: 0.5, fit: 1.85, rotY: -0.5, poi: 'Mars colonist (2150)' });
+    await ctx.prop(PBR('astronaut.glb'), { x: 1.5, z: 0.5, fit: 1.85, rotY: -0.5, poi: 'First Mars-Born Generation (2150 — Konstantin Tsiolkovsky & Carl Sagan’s multi-planetary vision)' });
+    await ctx.prop(PBR('neil_armstrong_spacesuit_smithsonian.glb'), { x: -2.4, z: 1.8, fit: 1.85, rotY: 0.45, poi: 'Martian Astrobiologist & Sabatier ISRU Engineer — synthesizing O₂ & CH₄ fuel from Martian CO₂ atmosphere + subsurface water ice' });
     // lander with a real ion-drive model glowing beneath
     const lander = new THREE.Group();
     const hull = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.8, 3.2, 12), new THREE.MeshStandardMaterial({ color: 0xd8dce0, roughness: 0.35, metalness: 0.9 }));
@@ -1747,15 +1949,30 @@ export const WORLD_BUILDERS = {
     }
     lander.position.set(12, ctx.terrain.heightAt(12, 2), 2);
     ctx.group.add(lander);
-    const drive = await ctx.prop(PBR('primary_ion_drive.glb'), { x: 12, z: 2, y: lander.position.y + 1.6, fit: 2.6, rotY: 0, playAll: true, poi: 'Ion drive — 10× the efficiency of chemical rockets' });
+    const drive = await ctx.prop(PBR('primary_ion_drive.glb'), { x: 12, z: 2, y: lander.position.y + 1.6, fit: 2.6, rotY: 0, playAll: true, poi: 'Nuclear-Electric / Fusion Ion Drive — high-specific-impulse Earth–Mars cycler propulsion' });
     if (drive) drive.rotation.x = Math.PI / 2;
+    const ionPlume = new THREE.Mesh(
+      new THREE.ConeGeometry(1.4, 3.2, 24, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0x4ae8ff, transparent: true, opacity: 0.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    ionPlume.position.set(12, lander.position.y + 0.8, 2);
+    ctx.group.add(ionPlume);
     ctx.particles({ count: 600, box: [90, 14, 90], center: [0, 6, 0], color: 0xd9a070, size: 0.1, speed: 0.4, direction: 1, sway: 2.2, opacity: 0.35 });
-    // Phobos
+    // Both Martian moons: Phobos & Deimos
     const phobos = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2, 2), new THREE.MeshStandardMaterial({ map: ctx.textures.moon || null, roughness: 1, color: 0x8a7a70 }));
     phobos.position.set(60, 70, -150);
     ctx.group.add(phobos);
+    ctx.poi('Phobos — inner Martian moon (9,376 km orbit, future space-elevator / propellant depot)', phobos, 3.5);
+    const deimos = new THREE.Mesh(new THREE.DodecahedronGeometry(1.1, 1), new THREE.MeshStandardMaterial({ map: ctx.textures.moon || null, roughness: 1, color: 0x9c8c80 }));
+    deimos.position.set(-48, 82, -165);
+    ctx.group.add(deimos);
+    ctx.poi('Deimos — outer Martian moon (23,460 km orbit)', deimos, 2.5);
     ctx.anim.push((t) => {
       phobos.rotation.y = t * 0.1;
+      deimos.rotation.y = -t * 0.07;
+    });
+    ctx.onWhatIf((on) => {
+      ionPlume.material.opacity = on ? 0.82 : 0.0;
     });
   },
 
@@ -1773,20 +1990,28 @@ export const WORLD_BUILDERS = {
     const swarm = ARCH.createDysonSwarm(ctx.anim, { count: 1600, inner: 18, outer: 36 });
     swarm.position.set(...sunPos);
     ctx.group.add(swarm);
-    ctx.poi('Dyson swarm — Kardashev Type II civilisation harvesting starlight', sun, 13);
+    ctx.poi('Dyson Swarm (Freeman Dyson 1960 & Nikolai Kardashev 1964) — Kardashev Type II civilisation harvesting ~4 × 10²⁶ W of stellar output', sun, 13);
     const oneill = ARCH.createONeillCylinder(ctx.anim, { position: [-13, -2.5, -14], length: 22, radius: 3.2 });
     oneill.rotation.y = 0.72;
     oneill.rotation.z = 0.12;
     ctx.group.add(oneill);
-    ctx.poi('O’Neill cylinder — 32 km rotating star-habitat', oneill, 4.5);
-    const ark = await ctx.prop(PBR('primary_ion_drive.glb'), { x: 7.5, z: -4, y: -2.2, fit: 6.8, rotY: 0.55, playAll: true, poi: 'Interstellar ark ship — fusion/ion propulsion' });
+    ctx.poi('O’Neill Cylinder (Gerard K. O’Neill, 1974) — 32 km counter-rotating star-habitat spinning for 1g centrifugal gravity', oneill, 4.5);
+    const ark = await ctx.prop(PBR('primary_ion_drive.glb'), { x: 7.5, z: -4, y: -2.2, fit: 6.8, rotY: 0.55, playAll: true, poi: 'Interstellar Generation Ark & Relativistic Laser-Sail — bound for Proxima Centauri b (4.24 ly)' });
     if (ark) ctx.anim.push((t) => {
       ark.position.y = -2.2 + Math.sin(t * 0.4) * 0.4;
       ark.rotation.z = Math.sin(t * 0.3) * 0.08;
     });
     addEarthInSky(ctx, { position: [-38, 12, -85], radius: 5.5, nightSide: true });
+
+    // Collimated Dyson stellar energy transmission beams (toggled by What-If, keeping the Dyson Swarm visible!)
+    const beamMat = new THREE.LineBasicMaterial({ color: 0x5ae8ff, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending });
+    const beam1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...sunPos), new THREE.Vector3(-13, -2.5, -14)]), beamMat);
+    const beam2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...sunPos), new THREE.Vector3(7.5, -2.2, -4)]), beamMat);
+    ctx.group.add(beam1, beam2);
     ctx.onWhatIf((on) => {
-      swarm.visible = !on;
+      swarm.visible = true;
+      swarm.scale.setScalar(on ? 1.15 : 1.0);
+      beamMat.opacity = on ? 0.92 : 0.0;
     });
   },
 };
