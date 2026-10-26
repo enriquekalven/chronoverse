@@ -241,6 +241,29 @@ body {
   border-color: var(--accent-sky);
 }
 
+.lang-select {
+  appearance: auto;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-sky);
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.lang-select option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+body.light-theme .lang-select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
 .tour-btn.active {
   background: #0284c7;
   color: #ffffff;

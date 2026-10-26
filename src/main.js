@@ -1,13 +1,31 @@
 import { CHAPTERS, MILESTONES, QUIZ_QUESTIONS } from './data/timelineData.js';
+import {
+  detectInitialLanguage,
+  saveLanguagePreference,
+  getLanguageMeta,
+  getUIStrings,
+  formatUIString,
+  applyLanguageToData,
+} from './data/i18n.js';
+import {
+  initAnalytics,
+  trackEvent,
+  trackMilestoneView,
+  trackWorldDive,
+  trackLanguageChange,
+} from './analytics.js';
 import { WorldEngine } from './engine/WorldEngine.js';
 import { renderContinentalDriftTexture } from './engine/HyperRealKit.js';
 
 /**
- * ChronoVerse 3D v4.0 — Main UI & Interaction Controller.
+ * ChronoVerse 3D v4.1 — Main UI, 10-Language Localization & GA4 Telemetry Controller.
  * Rendering is done by WorldEngine: one real 3D world per era (museum scans, photogrammetry, HDRI light).
  * Security: Strictly uses document.createElement(), textContent, and replaceChildren().
  * Zero innerHTML, outerHTML, insertAdjacentHTML, document.write, or blocking dialogs.
  */
+
+// Initialize Google Analytics 4 (Measurement ID: G-ZSNN1QGECJ)
+initAnalytics();
 
 /** Milestone id → 2D concept-illustration file in assets/scenes (shown ONLY in the inspector panel). */
 const SCENE_ART = {
@@ -44,17 +62,29 @@ const SCENE_ART = {
 };
 const artFor = (m) => (SCENE_ART[m.id] ? `./assets/scenes/${SCENE_ART[m.id]}.jpg` : null);
 
+const splitHeadline = (title = '') => title.split(/[:：]/)[0].trim();
+
 const canvas = document.getElementById('timeline-canvas');
 const labelLayer = document.getElementById('label-layer');
 const loadingScreen = document.getElementById('loading-screen');
+const loadingStatusEl = document.getElementById('loading-status');
+const loadingHintEl = document.querySelector('.loading-hint');
+const brandSubtitleEl = document.querySelector('.brand-subtitle');
+const langSelect = document.getElementById('lang-select');
 const chapterStepper = document.getElementById('chapter-stepper');
 const quickStopChips = document.getElementById('quick-stop-chips');
+const stopsBarLabelEl = document.querySelector('.stops-bar-label');
+const cosmicClockPillEl = document.querySelector('.cosmic-clock-pill');
+const cosmicClockStrongEl = document.querySelector('.cosmic-clock-pill strong');
 const hudCosmicClock = document.getElementById('hud-cosmic-clock');
 const warpOverlay = document.getElementById('warp-overlay');
 const warpEraLabel = document.getElementById('warp-era-label');
 const worldLoading = document.getElementById('world-loading');
 const worldLoadingText = document.getElementById('world-loading-text');
 const inspectorCinemaFigure = document.getElementById('inspector-cinema-figure');
+const cinemaTagEl = document.querySelector('.cinema-tag');
+const whatIfEyebrowEl = document.querySelector('.what-if-eyebrow');
+const inspectorSubtitles = document.querySelectorAll('#inspector-content .section-subtitle');
 
 // Left panel elements
 const leftChapterBadge = document.getElementById('left-chapter-badge');
@@ -62,9 +92,13 @@ const leftStopCounter = document.getElementById('left-stop-counter');
 const leftEraDate = document.getElementById('left-era-date');
 const btnPrevStop = document.getElementById('btn-prev-stop');
 const btnNextStop = document.getElementById('btn-next-stop');
+const paleoDriftTitleEl = document.querySelector('.paleo-drift-title');
 const paleoMiniCanvas = document.getElementById('paleo-mini-canvas');
 const leftTectonicStage = document.getElementById('left-tectonic-stage');
 const btnMiniPangaea = document.getElementById('btn-mini-pangaea');
+const cosmicDayTitleEl = document.querySelector('.cosmic-day-title');
+const leftCosmicClockDesc = document.getElementById('left-cosmic-clock-desc');
+const controlsHintSpans = document.querySelectorAll('.controls-hint span');
 
 // Right inspector elements
 const inspectorBadge = document.getElementById('inspector-badge');
@@ -114,6 +148,8 @@ const scrubberTickBtns = document.querySelectorAll('.scrubber-tick-btn');
 
 // Pangaea Interactive Splitter Modal
 const pangaeaModal = document.getElementById('pangaea-modal');
+const pangaeaModalTitleEl = document.getElementById('pangaea-modal-title');
+const pangaeaModalSubtitleEl = document.querySelector('#pangaea-modal .modal-subtitle');
 const btnOpenPangaea = document.getElementById('btn-open-pangaea');
 const btnClosePangaea = document.getElementById('btn-close-pangaea');
 const pangaeaLabCanvas = document.getElementById('pangaea-lab-canvas');
@@ -121,18 +157,30 @@ const pangaeaScrubber = document.getElementById('pangaea-scrubber');
 const pangaeaSliderBadge = document.getElementById('pangaea-slider-badge');
 const pangaeaLabDescription = document.getElementById('pangaea-lab-description');
 const pangaeaPresetBtns = document.querySelectorAll('.pangaea-preset');
+const pangaeaTickSpans = document.querySelectorAll('.pangaea-slider-wrap .scrubber-ticks span');
 
 // Atlas & Quiz Modals
 const atlasModal = document.getElementById('atlas-modal');
+const atlasModalTitleEl = document.getElementById('atlas-modal-title');
+const atlasModalSubtitleEl = document.querySelector('#atlas-modal .modal-subtitle');
 const btnOpenAtlas = document.getElementById('btn-open-atlas');
 const btnCloseAtlas = document.getElementById('btn-close-atlas');
 const atlasSearch = document.getElementById('atlas-search');
 const atlasGrid = document.getElementById('atlas-grid');
 
 const quizModal = document.getElementById('quiz-modal');
+const quizModalTitleEl = document.getElementById('quiz-modal-title');
 const btnOpenQuiz = document.getElementById('btn-open-quiz');
 const btnCloseQuiz = document.getElementById('btn-close-quiz');
 const quizBody = document.getElementById('quiz-body');
+
+let currentLang = detectInitialLanguage();
+let ui = getUIStrings(currentLang);
+applyLanguageToData(currentLang, CHAPTERS, MILESTONES, QUIZ_QUESTIONS);
+if (langSelect) {
+  langSelect.value = currentLang;
+}
+document.documentElement.lang = getLanguageMeta(currentLang).htmlLang;
 
 let showLabels = true;
 let isReadingAloud = false;
@@ -145,16 +193,16 @@ const floatingMarkerMap = new Map();
 
 function updatePortalBarUI(viewMode, milestone) {
   if (!btnPortalDive || !portalModeBadge || !milestone) return;
-  const shortName = milestone.title.split(':')[0];
+  const shortName = splitHeadline(milestone.title);
   if (viewMode === 'surface') {
-    portalModeBadge.textContent = `🌍 SURFACE 3D • ${milestone.eraBadge}`;
+    portalModeBadge.textContent = formatUIString(ui.portalSurfaceBadge, { era: milestone.eraBadge });
     portalModeBadge.classList.add('surface-active');
-    btnPortalDive.textContent = '🌌 Zoom Out to Space (Linear Earth Corridor)';
+    btnPortalDive.textContent = ui.portalExitSurfaceBtn;
     btnPortalDive.classList.add('surface-mode');
   } else {
-    portalModeBadge.textContent = `🌌 SPACE TIME-LAPSE • ${milestone.eraBadge}`;
+    portalModeBadge.textContent = formatUIString(ui.portalSpaceBadge, { era: milestone.eraBadge });
     portalModeBadge.classList.remove('surface-active');
-    btnPortalDive.textContent = `🔍 Zoom Into Earth: Explore “${shortName}” in 3D`;
+    btnPortalDive.textContent = formatUIString(ui.portalDiveBtn, { title: shortName });
     btnPortalDive.classList.remove('surface-mode');
   }
 }
@@ -165,6 +213,7 @@ const engine = new WorldEngine(canvas, MILESTONES, {
     const m = MILESTONES[engine.activeIndex];
     renderMilestoneDetails(m, engine.activeIndex);
     updatePortalBarUI(engine.viewMode, m);
+    trackMilestoneView(m, engine.activeIndex, engine.viewMode);
     if (new URLSearchParams(window.location.search).get('cleanview') === '1') {
       document.body.classList.add('clean-view');
     }
@@ -172,16 +221,19 @@ const engine = new WorldEngine(canvas, MILESTONES, {
   onMilestoneChange(milestone, index) {
     renderMilestoneDetails(milestone, index);
     updatePortalBarUI(engine.viewMode, milestone);
+    trackMilestoneView(milestone, index, engine.viewMode);
   },
   onViewModeChange(viewMode, milestone) {
     floatingMarkerMap.forEach((btn) => btn.remove());
     floatingMarkerMap.clear();
-    updatePortalBarUI(viewMode, milestone || MILESTONES[engine.activeIndex]);
+    const activeMs = milestone || MILESTONES[engine.activeIndex];
+    updatePortalBarUI(viewMode, activeMs);
+    trackWorldDive(activeMs, viewMode);
   },
   onWarp(active, milestone) {
     if (!warpOverlay) return;
     if (active && engine.showTunnelRibbon !== false) {
-      warpEraLabel.textContent = `⚡ LIGHT-SPEED WARP → ${milestone.icon} ${milestone.eraBadge}`;
+      warpEraLabel.textContent = `${ui.warpPrefix} ${milestone.icon} ${milestone.eraBadge}`;
       warpOverlay.classList.add('active');
     } else {
       warpOverlay.classList.remove('active');
@@ -190,12 +242,16 @@ const engine = new WorldEngine(canvas, MILESTONES, {
   onWorldLoading(loading, milestone) {
     if (!worldLoading) return;
     worldLoading.classList.toggle('hidden', !loading);
-    if (loading) worldLoadingText.textContent = `Zooming into “${milestone.title.split(':')[0]}” 3D surface…`;
+    if (loading) {
+      worldLoadingText.textContent = formatUIString(ui.worldLoadingPrefix, {
+        title: splitHeadline(milestone.title),
+      });
+    }
   },
   onAutoPlayChange(playing) {
     btnAutoplay.classList.toggle('active', playing);
     btnAutoplay.setAttribute('aria-pressed', String(playing));
-    btnAutoplay.textContent = playing ? '⏸️ Pause Tour' : '▶️ Autopilot Tour';
+    btnAutoplay.textContent = playing ? ui.btnAutopilotPause : ui.btnAutopilotPlay;
   },
   onFrame(currentProgress) {
     if (document.activeElement !== timelineScrubber) {
@@ -205,9 +261,163 @@ const engine = new WorldEngine(canvas, MILESTONES, {
   },
 });
 
+function applyStaticUITranslations() {
+  document.title = ui.pageTitle;
+  document.documentElement.lang = getLanguageMeta(currentLang).htmlLang;
+
+  if (brandSubtitleEl) brandSubtitleEl.textContent = ui.brandSubtitle;
+  if (loadingStatusEl) loadingStatusEl.textContent = ui.loadingStatus;
+  if (loadingHintEl) loadingHintEl.textContent = ui.loadingHint;
+
+  if (btnOpenPangaea) {
+    btnOpenPangaea.textContent = ui.btnPangaea;
+    btnOpenPangaea.title = ui.btnPangaeaTitle;
+  }
+  if (btnOpenAtlas) {
+    btnOpenAtlas.textContent = ui.btnAtlas;
+    btnOpenAtlas.title = ui.btnAtlasTitle;
+  }
+  if (btnAutoplay) {
+    btnAutoplay.textContent = engine.isAutoPlaying ? ui.btnAutopilotPause : ui.btnAutopilotPlay;
+  }
+  if (btnOpenQuiz) {
+    btnOpenQuiz.textContent = ui.btnQuiz;
+  }
+  if (btnToggleTheme) {
+    const isLight = document.body.classList.contains('light-theme');
+    btnToggleTheme.textContent = isLight ? ui.btnDarkMode : ui.btnLightMode;
+  }
+  if (btnCleanView) {
+    const clean = document.body.classList.contains('clean-view');
+    btnCleanView.textContent = clean ? ui.btnShowPanels : ui.btnCleanView;
+  }
+
+  if (stopsBarLabelEl) stopsBarLabelEl.textContent = ui.warpBarLabel;
+  if (cosmicClockPillEl) cosmicClockPillEl.title = ui.cosmicClockTooltip;
+  if (cosmicClockStrongEl) cosmicClockStrongEl.textContent = ui.cosmicClockLabel;
+
+  if (btnPrevStop) btnPrevStop.textContent = ui.btnPrevStop;
+  if (btnNextStop) btnNextStop.textContent = ui.btnNextStop;
+  if (paleoDriftTitleEl) paleoDriftTitleEl.textContent = ui.driftTitle;
+  if (btnMiniPangaea) btnMiniPangaea.textContent = ui.btnInteractiveLab;
+  if (cosmicDayTitleEl) cosmicDayTitleEl.textContent = ui.cosmicDayTitle;
+  if (leftCosmicClockDesc) leftCosmicClockDesc.textContent = ui.cosmicDayDesc;
+
+  if (btnToggleBloom) btnToggleBloom.textContent = ui.btnBloom;
+  if (btnToggleRibbon) btnToggleRibbon.textContent = ui.btnAO;
+  if (btnToggleLabels) btnToggleLabels.textContent = ui.btnLabels;
+  if (btnCamIn) btnCamIn.textContent = ui.btnZoomIn;
+  if (btnCamOut) btnCamOut.textContent = ui.btnZoomOut;
+
+  if (controlsHintSpans.length >= 3) {
+    controlsHintSpans[0].textContent = ui.hintScroll;
+    controlsHintSpans[1].textContent = ui.hintDrag;
+    controlsHintSpans[2].textContent = ui.hintKeys;
+  }
+
+  if (btnReadAloud) {
+    btnReadAloud.textContent = isReadingAloud ? ui.btnStopAudio : ui.btnReadAloud;
+  }
+  if (btnCollapseInspector) {
+    const hidden = inspectorContent.classList.contains('hidden');
+    btnCollapseInspector.textContent = hidden ? ui.btnDetails : ui.btnHide;
+  }
+  if (cinemaTagEl) cinemaTagEl.textContent = ui.cinemaTag;
+  if (btnExpandImax) btnExpandImax.textContent = ui.btnViewLarge;
+  if (whatIfEyebrowEl) whatIfEyebrowEl.textContent = ui.whatIfEyebrow;
+
+  if (inspectorSubtitles.length >= 2) {
+    inspectorSubtitles[0].textContent = ui.eraSnapshotTitle;
+    inspectorSubtitles[1].textContent = ui.funFactsTitle;
+  }
+
+  if (btnPortalWarpNext) btnPortalWarpNext.textContent = ui.portalWarpNextBtn;
+  if (btnPortalAutodive) {
+    btnPortalAutodive.textContent = engine.autoDiveOnArrival
+      ? ui.portalAutoZoomOn
+      : ui.portalAutoZoomOff;
+  }
+
+  if (Array.isArray(ui.scrubberTicks)) {
+    scrubberTickBtns.forEach((btn, i) => {
+      if (ui.scrubberTicks[i]) {
+        btn.textContent = ui.scrubberTicks[i];
+      }
+    });
+  }
+
+  if (pangaeaModalTitleEl) pangaeaModalTitleEl.textContent = ui.pangaeaModalTitle;
+  if (pangaeaModalSubtitleEl) pangaeaModalSubtitleEl.textContent = ui.pangaeaModalSubtitle;
+  if (Array.isArray(ui.pangaeaPresets)) {
+    pangaeaPresetBtns.forEach((btn, i) => {
+      if (ui.pangaeaPresets[i]) {
+        btn.textContent = ui.pangaeaPresets[i];
+      }
+    });
+  }
+  if (Array.isArray(ui.pangaeaTicks)) {
+    pangaeaTickSpans.forEach((sp, i) => {
+      if (ui.pangaeaTicks[i]) {
+        sp.textContent = ui.pangaeaTicks[i];
+      }
+    });
+  }
+
+  if (atlasModalTitleEl) atlasModalTitleEl.textContent = ui.atlasModalTitle;
+  if (atlasModalSubtitleEl) atlasModalSubtitleEl.textContent = ui.atlasModalSubtitle;
+  if (atlasSearch) atlasSearch.placeholder = ui.atlasSearchPlaceholder;
+  if (quizModalTitleEl) quizModalTitleEl.textContent = ui.quizModalTitle;
+}
+
+function setLanguage(nextLang, userInitiated = false) {
+  currentLang = saveLanguagePreference(nextLang);
+  ui = getUIStrings(currentLang);
+  applyLanguageToData(currentLang, CHAPTERS, MILESTONES, QUIZ_QUESTIONS);
+
+  if (langSelect && langSelect.value !== currentLang) {
+    langSelect.value = currentLang;
+  }
+
+  // Update corridor portal labels so 3D pins reflect the active language
+  if (engine && engine.corridor && Array.isArray(engine.corridor.nodes)) {
+    engine.corridor.nodes.forEach((node) => {
+      if (node && node.milestone) {
+        node.portalLabel = formatUIString(ui.markerDivePrefix, {
+          title: splitHeadline(node.milestone.title),
+        });
+      }
+    });
+  }
+
+  floatingMarkerMap.forEach((btn) => btn.remove());
+  floatingMarkerMap.clear();
+
+  applyStaticUITranslations();
+  buildNavigationBars();
+
+  const activeMs = MILESTONES[engine.activeIndex] || MILESTONES[0];
+  renderMilestoneDetails(activeMs, engine.activeIndex);
+  updatePortalBarUI(engine.viewMode, activeMs);
+
+  if (!pangaeaModal.classList.contains('hidden')) {
+    renderPangaeaLabModal(parseFloat(pangaeaScrubber.value || '250'));
+  }
+  if (!atlasModal.classList.contains('hidden')) {
+    renderAtlasList(atlasSearch.value);
+  }
+  if (!quizModal.classList.contains('hidden')) {
+    renderQuizStep();
+  }
+
+  if (userInitiated) {
+    trackLanguageChange(currentLang);
+  }
+}
+
 function buildNavigationBars() {
   // 1. Build 9 Chapter Stepper Buttons
   chapterStepper.replaceChildren();
+  chapterButtons.clear();
   CHAPTERS.forEach((chapter) => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -226,11 +436,12 @@ function buildNavigationBars() {
 
   // 2. Build 30 Quick-Stop Chips
   quickStopChips.replaceChildren();
+  stopChipButtons.clear();
   MILESTONES.forEach((m, idx) => {
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'stop-chip';
-    chip.textContent = `${m.icon} ${m.title.split(':')[0]}`;
+    chip.textContent = `${m.icon} ${splitHeadline(m.title)}`;
     chip.addEventListener('click', () => engine.flyToIndex(idx));
     quickStopChips.appendChild(chip);
     stopChipButtons.set(idx, chip);
@@ -252,9 +463,9 @@ function drawPaleoMiniMap(milestone) {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 13px system-ui, sans-serif';
+    ctx.font = 'bold 12px system-ui, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🌌 Pre-Earth Cosmic Era (No Continents Yet)', w * 0.5, h * 0.54);
+    ctx.fillText(ui.preEarthCosmic, w * 0.5, h * 0.54);
     return;
   }
 
@@ -279,10 +490,10 @@ function drawPaleoMiniMap(milestone) {
   ctx.textAlign = 'left';
   const maText =
     milestone.paleoMa >= 1
-      ? `${milestone.paleoMa} MYA`
+      ? `${milestone.paleoMa} ${ui.myaSuffix}`
       : milestone.paleoMa > 0
-      ? `${Math.round(milestone.paleoMa * 1000)}K Yrs Ago`
-      : 'Modern Continents';
+      ? `${Math.round(milestone.paleoMa * 1000)} ${ui.kyaSuffix}`
+      : ui.modernContinents;
   ctx.fillText(`🗺️ ${maText}`, 12, h - 11);
 }
 
@@ -314,14 +525,15 @@ function renderPangaeaLabModal(paleoMa) {
   // Dynamic continent name callouts interpolated by u = clamp(paleoMa / 250)
   const u = Math.max(0, Math.min(1, paleoMa / 250));
   const lerp = (a, b, t) => a + (b - a) * t;
+  const cNames = ui.continents || {};
   const labels = [
-    { name: 'N. America', x: lerp(0.22, 0.39, u), y: lerp(0.30, 0.38, u) },
-    { name: 'S. America', x: lerp(0.32, 0.44, u), y: lerp(0.66, 0.64, u) },
-    { name: 'Africa', x: lerp(0.53, 0.52, u), y: lerp(0.54, 0.55, u) },
-    { name: 'Eurasia', x: lerp(0.64, 0.58, u), y: lerp(0.28, 0.33, u) },
-    { name: 'India', x: lerp(0.68, 0.62, u), y: lerp(0.45, 0.72, u) },
-    { name: 'Australia', x: lerp(0.81, 0.69, u), y: lerp(0.71, 0.77, u) },
-    { name: 'Antarctica', x: lerp(0.55, 0.58, u), y: lerp(0.91, 0.86, u) },
+    { name: cNames.nAmerica || 'N. America', x: lerp(0.22, 0.39, u), y: lerp(0.30, 0.38, u) },
+    { name: cNames.sAmerica || 'S. America', x: lerp(0.32, 0.44, u), y: lerp(0.66, 0.64, u) },
+    { name: cNames.africa || 'Africa', x: lerp(0.53, 0.52, u), y: lerp(0.54, 0.55, u) },
+    { name: cNames.eurasia || 'Eurasia', x: lerp(0.64, 0.58, u), y: lerp(0.28, 0.33, u) },
+    { name: cNames.india || 'India', x: lerp(0.68, 0.62, u), y: lerp(0.45, 0.72, u) },
+    { name: cNames.australia || 'Australia', x: lerp(0.81, 0.69, u), y: lerp(0.71, 0.77, u) },
+    { name: cNames.antarctica || 'Antarctica', x: lerp(0.55, 0.58, u), y: lerp(0.91, 0.86, u) },
   ];
 
   ctx.font = 'bold 13px system-ui, sans-serif';
@@ -330,38 +542,35 @@ function renderPangaeaLabModal(paleoMa) {
     const px = lbl.x * w;
     const py = lbl.y * h;
     ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
-    ctx.fillRect(px - 42, py - 11, 84, 19);
+    ctx.fillRect(px - 46, py - 11, 92, 19);
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
-    ctx.strokeRect(px - 42, py - 11, 84, 19);
+    ctx.strokeRect(px - 46, py - 11, 92, 19);
     ctx.fillStyle = '#f8fafc';
     ctx.fillText(lbl.name, px, py + 3);
   });
 
   // Update stage badge & narrative
+  const st = ui.pangaeaStages || {};
   if (paleoMa >= 220) {
-    pangaeaSliderBadge.textContent = `${paleoMa} MILLION YEARS AGO • SUPERCONTINENT PANGAEA`;
-    pangaeaLabDescription.textContent =
-      'All 7 of today’s continents are fused together into one C-shaped supercontinent called Pangaea surrounded by the giant Panthalassa Ocean! You could walk on dry land from New York to Morocco and from Brazil to Nigeria.';
+    pangaeaSliderBadge.textContent = formatUIString(st.s220Badge, { ma: paleoMa });
+    pangaeaLabDescription.textContent = st.s220Desc;
   } else if (paleoMa >= 130) {
-    pangaeaSliderBadge.textContent = `${paleoMa} MILLION YEARS AGO • LAURASIA & GONDWANA SPLIT`;
-    pangaeaLabDescription.textContent =
-      'Jurassic Rifting! Volcanic mid-ocean fissures tear Pangaea into two halves: Laurasia in the north (North America + Eurasia) and Gondwana in the south, opening the young North Atlantic Ocean.';
+    pangaeaSliderBadge.textContent = formatUIString(st.s130Badge, { ma: paleoMa });
+    pangaeaLabDescription.textContent = st.s130Desc;
   } else if (paleoMa >= 55) {
-    pangaeaSliderBadge.textContent = `${paleoMa} MILLION YEARS AGO • SOUTH ATLANTIC OPENS & INDIA RACES NORTH`;
-    pangaeaLabDescription.textContent =
-      'Cretaceous Continental Drift! South America separates from Africa like two puzzle pieces pulling apart, while the island continent of India breaks free from Gondwana and sprints north at 15 cm per year!';
+    pangaeaSliderBadge.textContent = formatUIString(st.s55Badge, { ma: paleoMa });
+    pangaeaLabDescription.textContent = st.s55Desc;
   } else if (paleoMa >= 5) {
-    pangaeaSliderBadge.textContent = `${paleoMa} MILLION YEARS AGO • INDIA CRASHES INTO ASIA (HIMALAYAS RISE)`;
-    pangaeaLabDescription.textContent =
-      'Cenozoic Collision! India slams into Eurasia, crumpling the seafloor upward to push up the snow-capped Himalaya Mountains and Tibetan Plateau while Australia drifts north from Antarctica.';
+    pangaeaSliderBadge.textContent = formatUIString(st.s5Badge, { ma: paleoMa });
+    pangaeaLabDescription.textContent = st.s5Desc;
   } else if (paleoMa > 0.005) {
-    pangaeaSliderBadge.textContent = `${Math.round(paleoMa * 1000)}K YEARS AGO • ICE AGE BERINGIA LAND BRIDGE`;
-    pangaeaLabDescription.textContent =
-      'Pleistocene Ice Age! Continents are in their modern spots, but huge ice sheets lock up ocean water, dropping sea levels 120 meters and exposing the Beringia Land Bridge between Siberia and Alaska so humans can walk into the Americas!';
+    pangaeaSliderBadge.textContent = formatUIString(st.sIceBadge, {
+      ka: Math.round(paleoMa * 1000),
+    });
+    pangaeaLabDescription.textContent = st.sIceDesc;
   } else {
-    pangaeaSliderBadge.textContent = 'TODAY (0 MYA) • 7 CONTINENTS (STILL DRIFTING AT 2.5 CM/YEAR!)';
-    pangaeaLabDescription.textContent =
-      'Modern Earth! Our 7 continents—North America, South America, Africa, Europe, Asia, Australia, and Antarctica—are still moving on tectonic plates as fast as your fingernails grow. In 250 million years, they may fuse into "Pangaea Ultima"!';
+    pangaeaSliderBadge.textContent = st.sTodayBadge;
+    pangaeaLabDescription.textContent = st.sTodayDesc;
   }
 }
 
@@ -369,8 +578,11 @@ function renderMilestoneDetails(milestone, index) {
   document.documentElement.style.setProperty('--era-color', milestone.themeColor);
 
   const chapter = CHAPTERS.find((c) => c.id === milestone.chapterId) || CHAPTERS[0];
-  leftChapterBadge.textContent = `CHAPTER ${chapter.number} • ${chapter.title.toUpperCase()}`;
-  leftStopCounter.textContent = `Stop ${index + 1} of ${MILESTONES.length}`;
+  leftChapterBadge.textContent = `${ui.chapterWord} ${chapter.number} • ${chapter.title.toUpperCase()}`;
+  leftStopCounter.textContent = formatUIString(ui.stopOf, {
+    current: index + 1,
+    total: MILESTONES.length,
+  });
   leftEraDate.textContent = milestone.eraBadge;
   hudCosmicClock.textContent = milestone.cosmicClock;
 
@@ -378,7 +590,7 @@ function renderMilestoneDetails(milestone, index) {
   btnNextStop.disabled = index >= MILESTONES.length - 1;
 
   // Update Live Continental Drift Mini-Map
-  leftTectonicStage.textContent = milestone.tectonicStage || 'Modern 7 Continents';
+  leftTectonicStage.textContent = milestone.tectonicStage || ui.modernContinents;
   drawPaleoMiniMap(milestone);
 
   // Highlight active Chapter & Stop Chip
@@ -459,7 +671,7 @@ function updateFloatingMarkers() {
 
   const visibleMarkers = engine.getProjectedMarkers();
   const seenKeys = new Set();
-  const eraKey = `${engine.viewMode}:${engine.activeIndex}`;
+  const eraKey = `${engine.viewMode}:${engine.activeIndex}:${currentLang}`;
 
   visibleMarkers.forEach(({ index, milestone, x, y, distance, action, targetStop }) => {
     const key = `${eraKey}:${index}`;
@@ -469,7 +681,22 @@ function updateFloatingMarkers() {
       btn = document.createElement('button');
       btn.type = 'button';
       btn.className = action === 'dive' ? 'marker-tag poi-tag portal-pin-tag' : 'marker-tag poi-tag';
-      btn.textContent = `${milestone.icon} ${milestone.title}`;
+      if (action === 'dive') {
+        const ms = MILESTONES[targetStop ?? engine.activeIndex] || milestone;
+        btn.textContent = formatUIString(ui.markerDivePrefix, {
+          title: splitHeadline(ms.title),
+        });
+      } else if (action === 'warp') {
+        const nextMs = MILESTONES[targetStop ?? engine.activeIndex + 1];
+        btn.textContent = nextMs
+          ? formatUIString(ui.markerNextEarthPrefix, {
+              era: nextMs.eraBadge,
+              title: splitHeadline(nextMs.title),
+            })
+          : `${milestone.icon} ${milestone.title}`;
+      } else {
+        btn.textContent = `${milestone.icon} ${milestone.title}`;
+      }
       btn.addEventListener('click', () => {
         if (action === 'dive') {
           engine.zoomIntoWorld(targetStop ?? engine.activeIndex);
@@ -496,23 +723,25 @@ function updateFloatingMarkers() {
   });
 }
 
-// Speech Synthesis Read-Aloud for Kids
+// Speech Synthesis Read-Aloud in all 10 Languages
 function speakMilestone(milestone) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const text = `${milestone.eraBadge}. ${milestone.title}. ${milestone.summary} Mind-blowing fact: ${milestone.facts[0]}`;
+  const text = `${milestone.eraBadge}. ${milestone.title}. ${milestone.summary} ${ui.mindBlowingFactPrefix} ${milestone.facts[0]}`;
   const utter = new SpeechSynthesisUtterance(text);
+  const langMeta = getLanguageMeta(currentLang);
+  utter.lang = langMeta.ttsLang;
   utter.rate = 1.0;
   utter.pitch = 1.05;
   utter.onend = () => {
     isReadingAloud = false;
-    btnReadAloud.textContent = '🔊 Read Aloud';
+    btnReadAloud.textContent = ui.btnReadAloud;
     btnReadAloud.setAttribute('aria-pressed', 'false');
   };
   window.speechSynthesis.speak(utter);
 }
 
-// All 37 Stops Atlas Modal with Photorealistic Thumbnails
+// All 30 Stops Atlas Modal with Photorealistic Thumbnails
 function renderAtlasList(query = '') {
   const q = query.trim().toLowerCase();
   atlasGrid.replaceChildren();
@@ -542,7 +771,7 @@ function renderAtlasList(query = '') {
 
     const era = document.createElement('div');
     era.className = 'atlas-card-era';
-    era.textContent = `STOP ${idx + 1} • ${m.eraBadge}`;
+    era.textContent = `${ui.atlasStopPrefix} ${idx + 1} • ${m.eraBadge}`;
 
     const title = document.createElement('div');
     title.className = 'atlas-card-title';
@@ -561,25 +790,25 @@ function renderAtlasList(query = '') {
   });
 }
 
-// Interactive Kid Quiz Modal
+// Interactive Quiz Modal
 function renderQuizStep() {
   quizBody.replaceChildren();
 
   if (quizIndex >= QUIZ_QUESTIONS.length) {
     const doneTitle = document.createElement('h3');
-    doneTitle.textContent = `🎉 You scored ${quizScore} out of ${QUIZ_QUESTIONS.length}!`;
+    doneTitle.textContent = formatUIString(ui.quizDoneTitle, {
+      score: quizScore,
+      total: QUIZ_QUESTIONS.length,
+    });
 
     const badgeText = document.createElement('p');
     badgeText.className = 'inspector-summary';
-    badgeText.textContent =
-      quizScore >= 7
-        ? 'Rank unlocked: 🌟 Master Chrono-Captain of the Universe (Big Bang to Year 3000)!'
-        : 'Rank unlocked: 🚀 Time-Machine Explorer! Try another round to get a perfect score!';
+    badgeText.textContent = quizScore >= 7 ? ui.quizRankMaster : ui.quizRankExplorer;
 
     const retryBtn = document.createElement('button');
     retryBtn.type = 'button';
     retryBtn.className = 'what-if-btn';
-    retryBtn.textContent = '🔄 Play Again';
+    retryBtn.textContent = ui.quizPlayAgain;
     retryBtn.addEventListener('click', () => {
       quizIndex = 0;
       quizScore = 0;
@@ -587,13 +816,22 @@ function renderQuizStep() {
     });
 
     quizBody.append(doneTitle, badgeText, retryBtn);
+    trackEvent('quiz_completed', {
+      score: quizScore,
+      total: QUIZ_QUESTIONS.length,
+      language: currentLang,
+    });
     return;
   }
 
   const item = QUIZ_QUESTIONS[quizIndex];
   const progress = document.createElement('div');
   progress.className = 'chapter-eyebrow';
-  progress.textContent = `QUESTION ${quizIndex + 1} OF ${QUIZ_QUESTIONS.length} • SCORE: ${quizScore}`;
+  progress.textContent = formatUIString(ui.quizProgress, {
+    current: quizIndex + 1,
+    total: QUIZ_QUESTIONS.length,
+    score: quizScore,
+  });
 
   const qTitle = document.createElement('h3');
   qTitle.textContent = item.q;
@@ -610,7 +848,7 @@ function renderQuizStep() {
   nextBtn.type = 'button';
   nextBtn.className = 'what-if-btn hidden';
   nextBtn.textContent =
-    quizIndex + 1 < QUIZ_QUESTIONS.length ? 'Next Question ➡️' : 'See Final Score 🏆';
+    quizIndex + 1 < QUIZ_QUESTIONS.length ? ui.quizNext : ui.quizSeeScore;
   nextBtn.addEventListener('click', () => {
     quizIndex += 1;
     renderQuizStep();
@@ -625,15 +863,21 @@ function renderQuizStep() {
       Array.from(optionsWrap.children).forEach((b) => {
         b.disabled = true;
       });
-      if (idx === item.correct) {
+      const isCorrect = idx === item.correct;
+      if (isCorrect) {
         optBtn.classList.add('correct');
         quizScore += 1;
-        feedback.textContent = `✅ Correct! ${item.explanation}`;
+        feedback.textContent = `${ui.quizCorrect} ${item.explanation}`;
       } else {
         optBtn.classList.add('wrong');
         optionsWrap.children[item.correct].classList.add('correct');
-        feedback.textContent = `💡 Good try! ${item.explanation}`;
+        feedback.textContent = `${ui.quizTry} ${item.explanation}`;
       }
+      trackEvent('quiz_answer', {
+        question_index: quizIndex + 1,
+        correct: isCorrect,
+        language: currentLang,
+      });
       feedback.classList.remove('hidden');
       nextBtn.classList.remove('hidden');
     });
@@ -641,6 +885,13 @@ function renderQuizStep() {
   });
 
   quizBody.append(progress, qTitle, optionsWrap, feedback, nextBtn);
+}
+
+// Language selector listener
+if (langSelect) {
+  langSelect.addEventListener('change', (e) => {
+    setLanguage(e.target.value, true);
+  });
 }
 
 // Event Listeners
@@ -658,6 +909,11 @@ btnWhatIf.addEventListener('click', () => {
   const m = MILESTONES[engine.activeIndex];
   const active = engine.toggleWhatIf(m.id);
   updateWhatIfUI(m, active);
+  trackEvent('what_if_toggle', {
+    milestone_id: m.id,
+    active,
+    language: currentLang,
+  });
 });
 
 btnAutoplay.addEventListener('click', () => {
@@ -665,6 +921,10 @@ btnAutoplay.addEventListener('click', () => {
     engine.setTargetProgress(0);
   }
   engine.setAutoPlay(!engine.isAutoPlaying);
+  trackEvent('autopilot_toggle', {
+    playing: engine.isAutoPlaying,
+    language: currentLang,
+  });
 });
 
 btnReadAloud.addEventListener('click', () => {
@@ -672,19 +932,24 @@ btnReadAloud.addEventListener('click', () => {
   if (isReadingAloud) {
     window.speechSynthesis.cancel();
     isReadingAloud = false;
-    btnReadAloud.textContent = '🔊 Read Aloud';
+    btnReadAloud.textContent = ui.btnReadAloud;
     btnReadAloud.setAttribute('aria-pressed', 'false');
   } else {
     isReadingAloud = true;
-    btnReadAloud.textContent = '⏹️ Stop Audio';
+    btnReadAloud.textContent = ui.btnStopAudio;
     btnReadAloud.setAttribute('aria-pressed', 'true');
-    speakMilestone(MILESTONES[engine.activeIndex]);
+    const activeMs = MILESTONES[engine.activeIndex];
+    speakMilestone(activeMs);
+    trackEvent('read_aloud', {
+      milestone_id: activeMs.id,
+      language: currentLang,
+    });
   }
 });
 
 btnCollapseInspector.addEventListener('click', () => {
   const hidden = inspectorContent.classList.toggle('hidden');
-  btnCollapseInspector.textContent = hidden ? '▲ Details' : '▼ Hide';
+  btnCollapseInspector.textContent = hidden ? ui.btnDetails : ui.btnHide;
   btnCollapseInspector.setAttribute('aria-expanded', String(!hidden));
 });
 
@@ -692,13 +957,13 @@ btnToggleTheme.addEventListener('click', () => {
   const isLight = document.body.classList.toggle('light-theme');
   engine.setLightTheme(isLight);
   btnToggleTheme.setAttribute('aria-pressed', String(isLight));
-  btnToggleTheme.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+  btnToggleTheme.textContent = isLight ? ui.btnDarkMode : ui.btnLightMode;
 });
 
 btnCleanView.addEventListener('click', () => {
   const clean = document.body.classList.toggle('clean-view');
   btnCleanView.setAttribute('aria-pressed', String(clean));
-  btnCleanView.textContent = clean ? '🎛️ Show Panels' : '🖼️ Clean View';
+  btnCleanView.textContent = clean ? ui.btnShowPanels : ui.btnCleanView;
 });
 
 btnToggleBloom.addEventListener('click', () => {
@@ -743,7 +1008,9 @@ if (btnPortalAutodive) {
     engine.autoDiveOnArrival = !engine.autoDiveOnArrival;
     btnPortalAutodive.classList.toggle('active', engine.autoDiveOnArrival);
     btnPortalAutodive.setAttribute('aria-pressed', String(engine.autoDiveOnArrival));
-    btnPortalAutodive.textContent = engine.autoDiveOnArrival ? '🔄 Auto-Zoom: ON' : '🔄 Auto-Zoom: OFF';
+    btnPortalAutodive.textContent = engine.autoDiveOnArrival
+      ? ui.portalAutoZoomOn
+      : ui.portalAutoZoomOff;
   });
 }
 
@@ -768,6 +1035,7 @@ function openImaxModal() {
   imaxModalBadge.textContent = `${m.eraBadge} • ${m.cosmicClock}`;
   imaxModalCaption.textContent = `${m.subtitle} — ${m.summary}`;
   imaxModal.classList.remove('hidden');
+  trackEvent('open_imax_modal', { milestone_id: m.id, language: currentLang });
 }
 
 if (btnExpandImax) {
@@ -790,6 +1058,7 @@ function openPangaeaModal() {
   pangaeaScrubber.value = String(initialMa);
   renderPangaeaLabModal(initialMa);
   pangaeaModal.classList.remove('hidden');
+  trackEvent('open_pangaea_lab', { initial_ma: initialMa, language: currentLang });
 }
 
 btnOpenPangaea.addEventListener('click', openPangaeaModal);
@@ -813,6 +1082,7 @@ btnOpenAtlas.addEventListener('click', () => {
   renderAtlasList(atlasSearch.value);
   atlasModal.classList.remove('hidden');
   atlasSearch.focus();
+  trackEvent('open_atlas_modal', { language: currentLang });
 });
 btnCloseAtlas.addEventListener('click', () => atlasModal.classList.add('hidden'));
 atlasSearch.addEventListener('input', (e) => renderAtlasList(e.target.value));
@@ -822,12 +1092,13 @@ btnOpenQuiz.addEventListener('click', () => {
   quizScore = 0;
   renderQuizStep();
   quizModal.classList.remove('hidden');
+  trackEvent('open_quiz_modal', { language: currentLang });
 });
 btnCloseQuiz.addEventListener('click', () => quizModal.classList.add('hidden'));
 
 // Keyboard Navigation for Accessibility
 window.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT') return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
     e.preventDefault();
     engine.flyToIndex(engine.activeIndex + 1);
@@ -842,5 +1113,6 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+applyStaticUITranslations();
 buildNavigationBars();
 engine.init();

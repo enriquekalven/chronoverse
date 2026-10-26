@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta
     http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
+    content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com; media-src 'self' data: blob:; connect-src 'self' data: blob: https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://firebaseinstallations.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self';"
   />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta
@@ -15,6 +15,8 @@
   <title>ChronoVerse 3D — Hyper-Realistic Interactive Timeline (Big Bang to Year 3000)</title>
   <link rel="stylesheet" href="./styles.css" />
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+  <!-- Google Analytics 4 (Firebase project-maui / chronoverse-3d) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZSNN1QGECJ"></script>
 </head>
 <body>
   <!-- 3D WebGL Time Tunnel Canvas -->
@@ -65,6 +67,18 @@
     <nav id="chapter-stepper" class="chapter-stepper" aria-label="9 Chapters of Time"></nav>
 
     <div class="header-actions">
+      <select id="lang-select" class="action-pill lang-select" aria-label="Select Language" title="Language / Idioma / 语言 / 語言 / 한국어 / 日本語 / Français / Italiano / Português / Deutsch">
+        <option value="en">🇬🇧 English</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="zh-CN">🇨🇳 中文 (普通话)</option>
+        <option value="zh-HK">🇭🇰 中文 (粵語)</option>
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="it">🇮🇹 Italiano</option>
+        <option value="pt">🇧🇷 Português</option>
+        <option value="de">🇩🇪 Deutsch</option>
+      </select>
       <button id="btn-open-pangaea" type="button" class="action-pill pangaea-btn" title="Watch Supercontinent Pangaea slowly split into today's 7 continents!">
         🌍 Pangaea Split Lab
       </button>
