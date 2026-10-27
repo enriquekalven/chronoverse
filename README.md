@@ -44,3 +44,9 @@ Open **[http://127.0.0.1:8090](http://127.0.0.1:8090)** in your browser.
    - **Stop 27 (1975–2007 CE)**: **Personal Computers, the World Wide Web & the 2007 iPhone**.
    - **Stop 28 (2026 CE)**: **Present Day: The Age of AI, Humanoid Robotics & Global Connectivity**.
    - **Stops 29–30 (2150–3000 CE)**: **Terraforming Mars, O'Neill Space Habitats & Dyson Swarm Solar Collectors**.
+
+4. **🌐 10-Language Localization, Chirp 3 HD Neural Read-Aloud & GA4 Telemetry**:
+   - **10 Languages**: Full UI, 9 Chapters, 30 Milestones (narratives, stats, fun facts, What-If experiments), Pangaea Split Lab, and 8-question Time-Traveler Quiz localized in **English (`en`), Spanish (`es`), Mandarin Chinese (`zh-CN`), Cantonese (`zh-HK`), Korean (`ko`), Japanese (`ja`), French (`fr`), Italian (`it`), Portuguese (`pt`), and German (`de`)**.
+   - **🔊 Google Cloud Chirp 3 HD (`Aoede`) Neural Read-Aloud**: 300 pre-rendered studio-grade neural narration MP3s (`assets/audio/chirp/<lang>/<milestone-id>.mp3`) across all 10 languages and 30 eras, with automatic Web Speech API fallback when offline.
+   - **📊 Google Analytics 4 (`G-ZSNN1QGECJ`)**: Tracks milestone views, 3D surface dives, What-If toggles, Pangaea Lab usage, quiz completion, Read-Aloud playback, and language switching.
+

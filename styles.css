@@ -1257,14 +1257,27 @@ body.clean-view .quick-stops-bar {
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
   background: rgba(2, 6, 23, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.26);
   color: #f8fafc;
-  font-size: 0.78rem;
-  max-width: 280px;
-  white-space: normal;
+  font-size: 0.74rem;
+  padding: 0.28rem 0.62rem;
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: left;
   line-height: 1.25;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.42);
+  z-index: 5;
+}
+.marker-tag.poi-tag:hover,
+.marker-tag.poi-tag:focus-visible {
+  background: rgba(2, 6, 23, 0.95);
+  border-color: #7dd3fc;
+  max-width: 310px;
+  white-space: normal;
+  overflow: visible;
+  z-index: 40;
 }
 .marker-tag.poi-tag.portal-pin-tag {
   background: linear-gradient(135deg, rgba(2, 132, 199, 0.92), rgba(15, 23, 42, 0.94));
@@ -1279,10 +1292,10 @@ body.clean-view .quick-stops-bar {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: -14px;
+  bottom: -10px;
   width: 1px;
-  height: 14px;
-  background: rgba(255, 255, 255, 0.6);
+  height: 10px;
+  background: rgba(255, 255, 255, 0.55);
 }
 .inspector-cinema-figure.hidden { display: none; }
 .atlas-card-thumb.hidden { display: none; }

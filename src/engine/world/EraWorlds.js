@@ -952,7 +952,12 @@ export const WORLD_BUILDERS = {
       ctx.scatter('dry_branches_medium_01', { count: 24, minScale: 0.8, maxScale: 1.3, radius: 25, innerRadius: 2.5, seed: 82 }),
       ctx.scatter('grass_medium_01', { count: 60, minScale: 0.7, maxScale: 1.1, radius: 30, innerRadius: 6, seed: 83, tint: 0xb8a070 }),
     ]);
-    // Hearth ring of stones + roaring campfire
+    // Hearth ring of stones + roaring campfire + Pleistocene hide windbreak shelter
+    const shelter1 = ARCH.createPrehistoricShelterAndRack({
+      position: [-3.8, ctx.terrain.heightAt(-3.8, -3.6), -3.6],
+      rotationY: 0.55,
+    });
+    ctx.group.add(shelter1);
     const stoneProto = await ctx.assets.loadGLTF(PH('stone_01'));
     if (stoneProto) {
       for (let i = 0; i < 12; i++) {
@@ -979,9 +984,9 @@ export const WORLD_BUILDERS = {
       poi: 'Homo erectus Master Toolmaker (Turkana Boy / KNM-WT 15000 lineage) — flaking symmetrical Acheulean hand-axes',
     });
     await spawnLivingHuman(ctx, {
-      x: -0.3, z: -2.6, height: 1.76, sex: 'male', style: 'erectus',
+      x: -0.3, z: -2.4, height: 1.76, sex: 'male', style: 'erectus',
       action: 'hunt', tool: 'spear',
-      path: [[-2.4, -2.6], [0.6, -2.8]], speed: 0.9,
+      path: [[-2.2, -2.2], [1.8, -2.5]], speed: 0.9,
       poi: 'Homo erectus / H. heidelbergensis Hunter — patrolling with fire-hardened wooden Schöningen spear (300,000 YA)',
     });
 
@@ -1021,46 +1026,66 @@ export const WORLD_BUILDERS = {
     await ctx.scatter('stone_01', { count: 55, minScale: 0.6, maxScale: 1.4, radius: 28, innerRadius: 3, seed: 91 });
     await ctx.scatter('grass_medium_01', { count: 90, minScale: 0.8, maxScale: 1.3, radius: 26, innerRadius: 3.5, seed: 92, wind: { amp: 0.06, speed: 1.4, height: 0.5 } });
 
+    // Pleistocene timber & hide windbreak shelter + stone hearth ring
+    const shelter2 = ARCH.createPrehistoricShelterAndRack({
+      position: [3.8, ctx.terrain.heightAt(3.8, -2.6), -2.6],
+      rotationY: -0.55,
+    });
+    ctx.group.add(shelter2);
+    const stoneProto2 = await ctx.assets.loadGLTF(PH('stone_01'));
+    if (stoneProto2) {
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        const s = stoneProto2.scene.clone(true);
+        s.scale.setScalar(0.5 + (i % 3) * 0.1);
+        const sx = Math.cos(a) * 0.85;
+        const sz = -0.8 + Math.sin(a) * 0.85;
+        s.position.set(sx, ctx.terrain.heightAt(sx, sz), sz);
+        s.rotation.y = a * 1.7;
+        ctx.group.add(s);
+      }
+    }
+
     // Central shared encampment hearth where Homo sapiens, Neanderthals & Denisovans meet!
     const campFire = ctx.fire({ position: [0, ctx.terrain.heightAt(0, -0.8) + 0.05, -0.8], scale: 1.15, intensity: 1.65, lightIntensity: 58 });
     ctx.poi('Shared Pleistocene Encampment — Sapiens, Neanderthals & Denisovans (Svante Pääbo paleogenomics, Nobel Prize 2022)', campFire.group, 2.0);
 
     // 1. Homo sapiens explorers (slender build, ochre-trimmed hide tunic, walking & gesturing)
     await spawnLivingHuman(ctx, {
-      x: -1.8, z: 0.8, height: 1.75, sex: 'female', style: 'sapiens',
+      x: -2.4, z: 1.2, height: 1.75, sex: 'female', style: 'sapiens',
       action: 'walk', tool: 'spear',
-      path: [[-3.2, 1.8], [-0.8, 0.4]], speed: 0.95,
+      path: [[-3.6, 2.0], [-1.2, 0.5]], speed: 0.92,
       poi: 'Homo sapiens (315,000 YA, Jebel Irhoud, Morocco — Jean-Jacques Hublin) — globular braincase, chin & symbolic ochre',
     });
     await spawnLivingHuman(ctx, {
-      x: -0.9, z: -1.9, rotY: 0.45, height: 1.78, sex: 'male', style: 'sapiens',
+      x: -1.3, z: -2.1, rotY: 0.55, height: 1.78, sex: 'male', style: 'sapiens',
       action: 'debate', tool: 'torch',
       poi: 'Homo sapiens Storyteller — FOXP2 vocal tract anatomy, complex syntax & long-distance obsidian exchange',
     });
 
     // 2. Homo neanderthalensis hunters (stockier cold-adapted build, heavy fur pelts, tending fire & crafting tools)
     await spawnLivingHuman(ctx, {
-      x: 1.45, z: -0.4, rotY: -1.1, height: 1.65, sex: 'male', style: 'neanderthal',
+      x: 1.65, z: -0.5, rotY: -1.1, height: 1.65, sex: 'male', style: 'neanderthal',
       action: 'fire', tool: 'spear',
       poi: 'Homo neanderthalensis (400K–40K YA) — ~1,450 cm³ braincase, distilled birch-bark pitch adhesive & Mousterian Levallois tools',
     });
     await spawnLivingHuman(ctx, {
-      x: 2.5, z: 1.2, height: 1.62, sex: 'female', style: 'neanderthal',
+      x: 2.8, z: 1.4, height: 1.62, sex: 'female', style: 'neanderthal',
       action: 'walk', tool: 'handaxe',
-      path: [[3.4, 2.0], [1.4, 0.5]], speed: 0.88, phase: 2.1,
+      path: [[3.8, 2.2], [1.6, 0.7]], speed: 0.88, phase: 2.1,
       poi: 'Neanderthal & Sapiens interbreeding (~55,000 YA) — 1.5–2.1% of modern non-African human DNA',
     });
 
     // 3. Denisovan artisan working bone needles & chloritite bracelets
     await spawnLivingHuman(ctx, {
-      x: 0.3, z: -2.8, rotY: 0.1, height: 1.68, sex: 'female', style: 'iceage',
+      x: 0.3, z: -3.1, rotY: 0.1, height: 1.68, sex: 'female', style: 'iceage',
       action: 'knap', tool: 'handaxe',
       poi: 'Denisovan (Denisova Cave, Altai & Baishiya Karst, Tibet) — gifted high-altitude EPAS1 gene & 3–5% DNA to Oceania',
     });
 
     // Natural limestone boulder workbench with Levallois prepared-core flint flakes & red ochre (replacing anachronistic marble bust)
     const rockWorkbench = await ctx.prop('namaqualand_boulder_02', {
-      x: -3.2, z: -1.2, scale: 0.85, rotY: 0.4,
+      x: -3.4, z: -1.4, scale: 0.85, rotY: 0.4,
       poi: 'Levallois Prepared-Core Flint & Red Ochre Workbench — shared Middle Paleolithic toolkit of Sapiens & Neanderthals',
     });
     ctx.particles({ count: 220, box: [16, 5, 16], center: [0, 2, 0], color: 0xffe0b0, size: 0.03, speed: 0.08, direction: 1, sway: 0.4, opacity: 0.28, additive: true });
@@ -1193,31 +1218,17 @@ export const WORLD_BUILDERS = {
     ctx.setCamera({ distance: 11, pitch: 0.15, targetY: 1.2, yaw: 0.22 });
     await ctx.ground('farm_soil', { repeat: 24, amplitude: 0.8, frequency: 0.04, displacementScale: 0.12, flatRadius: 12 });
     // Golden wheat field swaying in the wind
-    await ctx.scatter('grass_medium_01', { count: 720, minScale: 1.1, maxScale: 1.7, radius: 40, innerRadius: 5, seed: 121, tint: 0xd8b25a, mask: (x, z) => z < -2.2 || x > 5, wind: { amp: 0.09, speed: 1.5, height: 0.6 } });
-    await ctx.scatter('shrub_02', { count: 16, minScale: 0.9, maxScale: 1.4, radius: 50, innerRadius: 12, seed: 122 });
-    await ctx.scatter('tree_small_02', { count: 8, minScale: 0.9, maxScale: 1.3, radius: 60, innerRadius: 18, seed: 123 });
-    // Mud-brick house with wooden-beam flat roof (Çatalhöyük / Jericho Pre-Pottery Neolithic style)
+    await ctx.scatter('grass_medium_01', { count: 900, minScale: 1.15, maxScale: 1.75, radius: 42, innerRadius: 3.8, seed: 121, tint: 0xdcb458, mask: (x, z) => z < -1.8 || x > 3.6, wind: { amp: 0.09, speed: 1.5, height: 0.6 } });
+    await ctx.scatter('shrub_02', { count: 22, minScale: 0.9, maxScale: 1.4, radius: 50, innerRadius: 10, seed: 122 });
+    await ctx.scatter('tree_small_02', { count: 10, minScale: 0.9, maxScale: 1.35, radius: 60, innerRadius: 15, seed: 123 });
+    // Authentic Çatalhöyük / Jericho terraced mud-brick village compound with rooftop ladder, timber portico & beehive bread oven
     const mud = await ctx.material('sandstone_cracks', { repeat: 4, displacementScale: 0.08, color: 0xc9a77a });
-    const wood = await ctx.material('rock_boulder_dry', { repeat: 2, displacementScale: 0, color: 0x6b4a2c });
-    const house = new THREE.Group();
-    const walls = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 5), mud);
-    ensureUV1(walls.geometry);
-    walls.position.y = 1.5;
-    walls.castShadow = walls.receiveShadow = true;
-    house.add(walls);
-    for (let i = 0; i < 9; i++) {
-      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 6.6, 10), wood);
-      beam.rotation.z = Math.PI / 2;
-      beam.position.set(0, 3.05, -2.2 + i * 0.55);
-      house.add(beam);
-    }
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.8, 0.1), new THREE.MeshStandardMaterial({ color: 0x1a120c }));
-    door.position.set(1.2, 0.9, 2.53);
-    house.add(door);
-    house.position.set(-6, ctx.terrain.heightAt(-6, -6), -6);
-    house.rotation.y = 0.5;
-    ctx.group.add(house);
-    ctx.poi('Mud-brick granary & dwelling — Çatalhöyük & Jericho (9,000–7,000 BCE)', house, 3.6);
+    const village = ARCH.createNeolithicVillage(mud, {
+      position: [-4.5, ctx.terrain.heightAt(-4.5, -9.8), -9.8],
+      rotationY: 0.35,
+    });
+    ctx.group.add(village);
+    ctx.poi('Mud-Brick Village & Granary Compound — Çatalhöyük & Jericho (9,000–7,000 BCE) with rooftop ladders & outdoor bread oven', village, 4.2);
 
     // Göbekli Tepe T-shaped Megalithic Pillar (9,600 BCE, Klaus Schmidt excavation)
     const gobekli = ARCH.createGobekliPillar({
@@ -1227,7 +1238,7 @@ export const WORLD_BUILDERS = {
     ctx.group.add(gobekli);
     ctx.poi('Göbekli Tepe T-Shaped Limestone Pillar (9,600 BCE, Anatolia — Klaus Schmidt) — world’s oldest monumental sanctuary carved with foxes & cranes', gobekli, 3.4);
 
-    await ctx.prop(PBR('village_waterwell.glb'), { x: -2.5, z: -2.0, fit: 2.2, rotY: 0.3, poi: 'Stone village well — permanent Neolithic irrigation & water supply' });
+    await ctx.prop(PBR('village_waterwell.glb'), { x: -2.6, z: -2.2, fit: 2.2, rotY: 0.3, poi: 'Stone village well — permanent Neolithic irrigation & water supply' });
     const wagon = await ctx.prop(PBR('village_wagon.glb'), { x: 3.4, z: -1.4, fit: 2.4, rotY: -0.6, poi: 'Late Neolithic / Chalcolithic Wheeled Cart (~3500 BCE) — draft oxen & bulk harvest transport' });
     let wagonBoost = 1;
     if (wagon) {
@@ -1253,7 +1264,7 @@ export const WORLD_BUILDERS = {
     await spawnLivingHuman(ctx, {
       x: -2.2, z: -0.4, height: 1.65, sex: 'female', style: 'farmer',
       action: 'walk', tool: 'jug',
-      path: [[-2.2, -1.2], [-4.8, -3.5]], speed: 0.95,
+      path: [[-2.2, -1.2], [-4.8, -4.2]], speed: 0.95,
       poi: 'Village Potter & Water-Bearer — carrying fired ceramic vessels to the mud-brick granary',
     });
     await spawnLivingHuman(ctx, {
@@ -1263,11 +1274,27 @@ export const WORLD_BUILDERS = {
       poi: 'Grain Harvester — storing surplus harvests that fueled population growth from 5 million to 100+ million',
     });
 
-    // Pottery & baskets (real photogrammetry scans)
-    await ctx.prop('ceramic_vase_01', { x: 0.6, z: 1.2, fit: 0.75, poi: 'Fired clay pottery — grain, beer & olive-oil storage' });
-    await ctx.prop('jug_01', { x: 1.3, z: 1.0, fit: 0.65 });
-    await ctx.prop('wooden_bowl_01', { x: -0.3, z: 1.6, fit: 0.5 });
-    await ctx.prop('wicker_basket_01', { x: -1.4, z: 0.8, fit: 0.7 });
+    // Textured mud-brick & timber-curbed courtyard plinth under the pottery & grain baskets
+    const plinthY = ctx.terrain.heightAt(0.1, 1.15);
+    const mudPlinth = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.09, 1.45), mud);
+    mudPlinth.position.set(0.1, plinthY + 0.045, 1.15);
+    mudPlinth.receiveShadow = mudPlinth.castShadow = true;
+    ctx.group.add(mudPlinth);
+    const curbTimber = new THREE.MeshStandardMaterial({ color: 0x563c24, roughness: 0.9 });
+    [-0.72, 0.72].forEach((dz) => {
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 3.28, 10), curbTimber);
+      log.rotation.z = Math.PI / 2;
+      log.position.set(0.1, plinthY + 0.055, 1.15 + dz);
+      log.castShadow = log.receiveShadow = true;
+      ctx.group.add(log);
+    });
+
+    // Pottery & baskets (real photogrammetry scans resting on the courtyard plinth)
+    const potTopY = plinthY + 0.09;
+    await ctx.prop('ceramic_vase_01', { x: 0.6, z: 1.2, y: potTopY, fit: 0.72, tint: 0xc87a48, poi: 'Fired clay pottery — grain, beer & olive-oil storage' });
+    await ctx.prop('jug_01', { x: 1.3, z: 1.0, y: potTopY, fit: 0.65 });
+    await ctx.prop('wooden_bowl_01', { x: -0.3, z: 1.4, y: potTopY, fit: 0.5 });
+    await ctx.prop('wicker_basket_01', { x: -1.0, z: 1.0, y: potTopY, fit: 0.7 });
     ctx.particles({ count: 200, box: [50, 6, 50], center: [0, 2, 0], color: 0xfff0c0, size: 0.04, speed: 0.15, direction: 1, sway: 1.0, opacity: 0.3, additive: true });
     ctx.onWhatIf((on) => {
       wagonBoost = on ? 2.6 : 1.0;
@@ -1277,35 +1304,44 @@ export const WORLD_BUILDERS = {
   /* ---------------- 19. Bronze Age & pyramids ---------------- */
   'bronze-age-pyramids': async (ctx) => {
     ctx.setEnv({ hdri: 'syferfontein_1d_clear', envIntensity: 1.0, bgIntensity: 1.0, fogColor: 0xe7d6b8, fogDensity: 0.0028, sunDir: [0.5, 0.75, 0.45], sunColor: 0xfff6e0, sunIntensity: 3.4, hemi: 0.55 });
-    ctx.setCamera({ distance: 16, pitch: 0.11, targetY: 2.0, yaw: 0.12 });
+    ctx.setCamera({ distance: 15.5, pitch: 0.11, targetY: 2.0, yaw: 0.12 });
     await ctx.ground('sand_01', { repeat: 26, amplitude: 1.4, frequency: 0.03, displacementScale: 0.12, flatRadius: 16, size: 320, segments: 220 });
     const sandstone = await ctx.material('large_sandstone_blocks', { repeat: 1, displacementScale: 0.04, color: 0xe0c9a0 });
-    const great = ARCH.createPyramid(sandstone, { base: 84, height: 50, courses: 44, blockLen: 1.9, position: [-28, 0, -145], rotationY: 0.2 });
-    const second = ARCH.createPyramid(sandstone, { base: 70, height: 42, courses: 40, blockLen: 1.75, position: [44, 0, -175], rotationY: 0.15 });
-    const third = ARCH.createPyramid(sandstone, { base: 36, height: 23, courses: 30, blockLen: 1.2, position: [98, 0, -195], rotationY: 0.1 });
+    const great = ARCH.createPyramid(sandstone, { base: 84, height: 52, courses: 44, blockLen: 1.9, position: [-22, 0, -112], rotationY: 0.2 });
+    const second = ARCH.createPyramid(sandstone, { base: 70, height: 44, courses: 40, blockLen: 1.75, position: [42, 0, -142], rotationY: 0.15 });
+    const third = ARCH.createPyramid(sandstone, { base: 36, height: 24, courses: 30, blockLen: 1.2, position: [92, 0, -168], rotationY: 0.1 });
     ctx.group.add(great, second, third);
     ctx.poi('Great Pyramid of Giza (Pharaoh Khufu & Vizier Hemiunu, 2560 BCE) — 146.6 m tall, 2.3 million limestone blocks', great, 36);
     const mudbrick = await ctx.material('sandstone_cracks', { repeat: 3, displacementScale: 0.05, color: 0xb98f63 });
-    const zig = ARCH.createZiggurat(mudbrick, { base: 34, tiers: 4, tierH: 4.5, position: [-88, 0, -85] });
+    const zig = ARCH.createZiggurat(mudbrick, { base: 34, tiers: 4, tierH: 4.5, position: [-78, 0, -76] });
     ctx.group.add(zig);
     ctx.poi('Great Ziggurat of Ur — King Ur-Nammu, Sumer / Mesopotamia (2100 BCE)', zig, 20);
     await ctx.water({ size: 500, y: -0.35, color: 0x2f6f7a, distortion: 1.0 });
     ctx.terrain.mesh.position.y = 0;
     await Promise.all([
-      ctx.scatter('island_tree_01', { count: 10, minScale: 0.9, maxScale: 1.3, radius: 70, innerRadius: 20, seed: 131, mask: (x, z) => z > 20 }),
-      ctx.scatter('grass_medium_01', { count: 120, minScale: 0.9, maxScale: 1.4, radius: 60, innerRadius: 6, seed: 132, tint: 0x9fb060, mask: (x, z) => z > 12 }),
-      ctx.scatter('namaqualand_boulder_05', { count: 6, minScale: 0.6, maxScale: 1.4, radius: 50, innerRadius: 10, seed: 133, tint: 0xd8c3a0 }),
+      ctx.scatter('island_tree_01', { count: 16, minScale: 0.9, maxScale: 1.4, radius: 70, innerRadius: 12, seed: 131, mask: (x, z) => z > 8 || x < -14 }),
+      ctx.scatter('grass_medium_01', { count: 150, minScale: 0.9, maxScale: 1.4, radius: 60, innerRadius: 6, seed: 132, tint: 0x9fb060, mask: (x, z) => z > 8 || x < -12 }),
+      ctx.scatter('namaqualand_boulder_05', { count: 8, minScale: 0.6, maxScale: 1.4, radius: 50, innerRadius: 9, seed: 133, tint: 0xd8c3a0 }),
     ]);
+
+    // Heavy Cedar Hauling Sled with 2.5-ton Limestone Block on Wooden Rollers + Royal Scribe Lotus-Column Pavilion
+    const cedarWood = new THREE.MeshStandardMaterial({ color: 0x6b4828, roughness: 0.82 });
+    const sledAndPavilion = ARCH.createPyramidRampAndSled(sandstone, cedarWood, {
+      sledPos: [-4.6, ctx.terrain.heightAt(-4.6, -1.6), -1.6],
+      sledRotY: 2.05,
+      pavilionPos: [0, ctx.terrain.heightAt(0, 0), 0],
+    });
+    ctx.group.add(sledAndPavilion);
 
     // Living Ancient Egyptian Builders, Stone-Masons & Royal Scribes working on the Giza Plateau!
     await spawnLivingHuman(ctx, {
-      x: -3.2, z: -2.8, height: 1.73, sex: 'male', style: 'egyptian',
-      action: 'haul', path: [[-5.5, -2.0], [1.5, -5.5]], speed: 0.9,
+      x: -2.6, z: -2.8, height: 1.73, sex: 'male', style: 'egyptian',
+      action: 'haul', path: [[-3.4, -2.3], [1.2, -4.8]], speed: 0.85,
       poi: 'Giza Master Builder (Vizier Hemiunu & Imhotep lineage) — hauling 2.5-ton Tura limestone blocks on water-lubricated sleds',
     });
     await spawnLivingHuman(ctx, {
-      x: -4.4, z: -2.2, height: 1.71, sex: 'male', style: 'egyptian',
-      action: 'haul', path: [[-6.8, -1.4], [0.2, -4.9]], speed: 0.9, phase: 0.8,
+      x: -3.6, z: -2.2, height: 1.71, sex: 'male', style: 'egyptian',
+      action: 'haul', path: [[-4.4, -1.8], [0.2, -4.2]], speed: 0.85, phase: 0.8,
     });
     await spawnLivingHuman(ctx, {
       x: 2.8, z: -1.8, rotY: -0.6, height: 1.72, sex: 'male', style: 'egyptian',
@@ -1326,15 +1362,11 @@ export const WORLD_BUILDERS = {
     ctx.group.add(foundry);
     ctx.poi('Bronze Smelting Furnace (1085 °C Cu+Sn alloy) & Code of Hammurabi Stele (Babylon, 1750 BCE — 282 laws in Akkadian cuneiform)', foundry, 2.2);
 
-    // Queen Nefertiti bust & Bronze Age vessels on carved sandstone altar
-    const table = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.85, 1.3), sandstone);
-    ensureUV1(table.geometry);
-    table.position.set(0, ctx.terrain.heightAt(0, 0) + 0.425, 0);
-    table.castShadow = table.receiveShadow = true;
-    ctx.group.add(table);
-    await ctx.prop(PBR('nefertiti_bust.glb'), { x: 0.2, z: 0, y: table.position.y + 0.425, fit: 1.15, rotY: 0.15, poi: 'Bust of Queen Nefertiti (Sculptor Thutmose, Amarna, 1345 BCE) — museum scan' });
-    await ctx.prop('brass_pot_01', { x: -1.35, z: 0.1, y: table.position.y + 0.425, fit: 0.72, poi: 'Cast Bronze Vessel — trade connecting Cyprus copper & Afghanistan/Cornwall tin', metalness: 1, roughness: 0.35 });
-    await ctx.prop('antique_ceramic_vase_01', { x: 1.45, z: 0.1, y: table.position.y + 0.425, fit: 0.85 });
+    // Queen Nefertiti bust & Bronze Age vessels on the Royal Pavilion's carved limestone table (top at y = 0.75)
+    const tableTopY = ctx.terrain.heightAt(0, 0) + 0.75;
+    await ctx.prop(PBR('nefertiti_bust.glb'), { x: 0.15, z: 0, y: tableTopY, fit: 1.15, rotY: 0.15, poi: 'Bust of Queen Nefertiti (Sculptor Thutmose, Amarna, 1345 BCE) — museum scan' });
+    await ctx.prop('brass_pot_01', { x: -0.75, z: 0.1, y: tableTopY, fit: 0.68, poi: 'Cast Bronze Vessel — trade connecting Cyprus copper & Afghanistan/Cornwall tin', metalness: 1, roughness: 0.35 });
+    await ctx.prop('antique_ceramic_vase_01', { x: 0.85, z: 0.1, y: tableTopY, fit: 0.78 });
     ctx.particles({ count: 300, box: [80, 8, 80], center: [0, 3, 0], color: 0xffe8c0, size: 0.06, speed: 0.2, direction: 1, sway: 1.4, opacity: 0.25 });
     ctx.onWhatIf((on) => {
       if (foundry.userData.melt) {
@@ -1349,55 +1381,58 @@ export const WORLD_BUILDERS = {
   /* ---------------- 20. Classical Greece ---------------- */
   'classical-greece': async (ctx) => {
     ctx.setEnv({ hdri: 'kiara_1_dawn', envIntensity: 1.0, bgIntensity: 1.0, fogColor: 0xdfe4ea, fogDensity: 0.003, sunDir: [0.55, 0.55, 0.6], sunColor: 0xffe6c0, sunIntensity: 3.2, hemi: 0.55 });
-    ctx.setCamera({ distance: 17, pitch: 0.11, targetY: 2.4, yaw: 0.18 });
+    ctx.setCamera({ distance: 16.5, pitch: 0.11, targetY: 2.3, yaw: 0.18 });
     await ctx.ground('rocks_ground_01', { repeat: 22, color: 0xbfb09a, amplitude: 1.2, frequency: 0.04, displacementScale: 0.15, flatRadius: 14 });
     const marble = await ctx.material('marble_01', { repeat: 2, displacementScale: 0.0, color: 0xf2eee4 });
-    const temple = ARCH.createGreekTemple(marble, { position: [0, 0, -48], rotationY: Math.PI / 2 });
+    const temple = ARCH.createGreekTemple(marble, { position: [0, 0, -40], rotationY: Math.PI / 2 });
     ctx.group.add(temple);
     ctx.poi('Parthenon (Pericles, Phidias, Ictinus & Callicrates, 447–432 BCE) — 8 × 17 Doric columns on the Athenian Acropolis', temple, 16);
+
+    const agoraStone = new THREE.MeshStandardMaterial({ color: 0x8e8270, roughness: 0.9, metalness: 0.02 });
+
     await Promise.all([
-      ctx.scatter('searsia_burchellii', { count: 14, minScale: 0.9, maxScale: 1.5, radius: 60, innerRadius: 14, seed: 141 }),
-      ctx.scatter('wild_rooibos_bush', { count: 30, minScale: 0.8, maxScale: 1.4, radius: 55, innerRadius: 8, seed: 142 }),
-      ctx.scatter('grass_medium_01', { count: 160, minScale: 0.8, maxScale: 1.3, radius: 50, innerRadius: 6, seed: 143, tint: 0xb9b070 }),
-      ctx.scatter('namaqualand_boulder_02', { count: 8, minScale: 0.8, maxScale: 1.6, radius: 50, innerRadius: 12, seed: 144, tint: 0xd8cdb8 }),
+      ctx.scatter('searsia_burchellii', { count: 16, minScale: 0.9, maxScale: 1.5, radius: 60, innerRadius: 11, seed: 141 }),
+      ctx.scatter('wild_rooibos_bush', { count: 34, minScale: 0.8, maxScale: 1.4, radius: 55, innerRadius: 8, seed: 142 }),
+      ctx.scatter('grass_medium_01', { count: 180, minScale: 0.8, maxScale: 1.3, radius: 50, innerRadius: 7.5, seed: 143, tint: 0xb9b070 }),
+      ctx.scatter('namaqualand_boulder_02', { count: 8, minScale: 0.8, maxScale: 1.6, radius: 50, innerRadius: 11, seed: 144, tint: 0xd8cdb8 }),
     ]);
 
     // Living Classical Greek Philosophers, Geometers & Citizens debating in front of the Parthenon!
     await spawnLivingHuman(ctx, {
-      x: -1.4, z: -1.8, rotY: 0.8, height: 1.74, sex: 'male', style: 'greek',
+      x: -1.5, z: -0.6, rotY: 0.85, height: 1.74, sex: 'male', style: 'greek',
       action: 'debate', tool: 'scroll',
       poi: 'Socrates, Plato & Aristotle — Athenian Academy & Lyceum debating ethics, epistemology, logic & politics',
     });
     await spawnLivingHuman(ctx, {
-      x: 1.2, z: -2.0, rotY: -0.9, height: 1.68, sex: 'female', style: 'greek',
+      x: 1.4, z: -0.7, rotY: -0.9, height: 1.68, sex: 'female', style: 'greek',
       action: 'debate', tool: 'scroll',
       poi: 'Archimedes of Syracuse & Eratosthenes of Cyrene — deductive geometry, hydrostatics & measuring Earth’s 40,000 km circumference',
     });
     await spawnLivingHuman(ctx, {
-      x: 0.0, z: -5.5, height: 1.75, sex: 'male', style: 'greek',
-      action: 'walk', path: [[-4.5, -5.5], [4.5, -5.5]], speed: 0.9,
+      x: 0.0, z: -4.8, height: 1.75, sex: 'male', style: 'greek',
+      action: 'walk', path: [[-4.2, -4.8], [4.2, -4.8]], speed: 0.9,
       poi: 'Axial Age Global Contemporary — while Athens convened the Ecclesia, Buddha, Confucius & Cyrus the Great reshaped Asia',
     });
 
     // 3D Antikythera Mechanism (c. 150–100 BCE geared bronze astronomical computer)
     const antikythera = ARCH.createAntikytheraMechanism(ctx.anim, {
-      position: [0, ctx.terrain.heightAt(0, 1.2), 1.2],
+      position: [0, ctx.terrain.heightAt(0, -2.2), -2.2],
       rotationY: 0.15,
     });
     ctx.group.add(antikythera);
     ctx.poi('Antikythera Mechanism (c. 100 BCE, Archimedes tradition) — 30+ interlocking bronze epicyclic gears predicting eclipses & Olympic cycles', antikythera, 1.8);
 
-    const plinth = (x, z, h = 1.2) => {
-      const p = new THREE.Mesh(new THREE.BoxGeometry(0.9, h, 0.9), marble);
+    const plinth = (x, z, h = 1.15) => {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(0.85, h, 0.85), agoraStone);
       ensureUV1(p.geometry);
       p.position.set(x, ctx.terrain.heightAt(x, z) + h / 2, z);
       p.castShadow = p.receiveShadow = true;
       ctx.group.add(p);
       return p.position.y + h / 2;
     };
-    await ctx.prop('marble_bust_01', { x: -2.8, z: 1.5, y: plinth(-2.8, 1.5), fit: 0.95, rotY: 0.4, poi: 'Classical Portrait Bust — Pericles, Herodotus & Hippocrates' });
-    await ctx.prop('horse_statue_01', { x: 2.8, z: 0.8, y: plinth(2.8, 0.8, 1.0), fit: 1.15, rotY: -0.5, poi: 'Hollow-cast Bronze Sculpture — Classical contrapposto realism' });
-    await ctx.prop('antique_ceramic_vase_01', { x: 0.2, z: 2.4, fit: 0.95, poi: 'Attic Red-Figure Amphora — Mediterranean maritime wine & olive-oil trade' });
+    await ctx.prop('marble_bust_01', { x: -3.2, z: 0.8, y: plinth(-3.2, 0.8), fit: 0.95, rotY: 0.4, tint: 0xd8cfc0, poi: 'Classical Portrait Bust — Pericles, Herodotus & Hippocrates' });
+    await ctx.prop('horse_statue_01', { x: 3.2, z: 0.6, y: plinth(3.2, 0.6, 1.0), fit: 1.15, rotY: -0.5, tint: 0x9c7a4c, poi: 'Hollow-cast Bronze Sculpture — Classical contrapposto realism' });
+    await ctx.prop('antique_ceramic_vase_01', { x: 0.2, z: 1.8, y: ctx.terrain.heightAt(0.2, 1.8), fit: 0.88, tint: 0xc87442, poi: 'Attic Red-Figure Amphora — Mediterranean maritime wine & olive-oil trade' });
     ctx.particles({ count: 200, box: [60, 8, 60], center: [0, 3, 0], color: 0xffffff, size: 0.04, speed: 0.1, direction: 1, sway: 1.0, opacity: 0.2, additive: true });
     ctx.onWhatIf((on) => {
       antikythera.userData.speedMultiplier = on ? 6.0 : 1.0;

@@ -385,17 +385,23 @@ export function createFactory(brick, iron, { position = [0, 0, -26], rotationY =
 export function createRailway(iron, wood, { length = 120, position = [0, 0, 6], rotationY = 0 } = {}) {
   const g = new THREE.Group();
   const gauge = 1.435;
+  // Crushed stone gravel ballast embankment bed
+  const ballastMat = new THREE.MeshStandardMaterial({ color: 0x544e48, roughness: 0.95, metalness: 0.05 });
+  const ballast = box(3.4, 0.14, length, ballastMat, 0, 0.04, 0);
+  g.add(ballast);
+
+  const railSteel = new THREE.MeshStandardMaterial({ color: 0x383c42, roughness: 0.32, metalness: 0.88 });
   [-gauge / 2, gauge / 2].forEach((x) => {
-    const rail = box(0.08, 0.16, length, iron, x, 0.26, 0);
+    const rail = box(0.08, 0.16, length, railSteel, x, 0.26, 0);
     g.add(rail);
-    g.add(box(0.14, 0.03, length, iron, x, 0.185, 0));
+    g.add(box(0.15, 0.035, length, iron, x, 0.185, 0));
   });
-  const tieGeo = new THREE.BoxGeometry(2.6, 0.16, 0.26);
+  const tieGeo = new THREE.BoxGeometry(2.65, 0.16, 0.26);
   ensureUV1(tieGeo);
-  const n = Math.floor(length / 0.7);
+  const n = Math.floor(length / 0.68);
   const ties = new THREE.InstancedMesh(tieGeo, wood, n);
   for (let i = 0; i < n; i++) {
-    _m.compose(_p.set(0, 0.09, -length / 2 + i * 0.7), _q.identity(), _s.set(1, 1, 1));
+    _m.compose(_p.set(0, 0.11, -length / 2 + i * 0.68), _q.identity(), _s.set(1, 1, 1));
     ties.setMatrixAt(i, _m);
   }
   ties.receiveShadow = true;
@@ -408,91 +414,194 @@ export function createRailway(iron, wood, { length = 120, position = [0, 0, 6], 
 
 export function createSteamLocomotive(iron, brass, animCallbacks, { position = [0, 0, 6], rotationY = 0 } = {}) {
   const g = new THREE.Group();
-  const dark = iron;
-  // boiler
-  const boiler = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 7.2, 32), dark);
+  void iron;
+  // Authentic wrought-iron & lacquered boiler black + crimson running-board trim
+  const boilerIron = new THREE.MeshStandardMaterial({ color: 0x1e2226, roughness: 0.34, metalness: 0.82 });
+  const smokeboxIron = new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.46, metalness: 0.75 });
+  const crimsonTrim = new THREE.MeshStandardMaterial({ color: 0x7c1c18, roughness: 0.42, metalness: 0.35 });
+  const steelRim = new THREE.MeshStandardMaterial({ color: 0xb8c0c8, roughness: 0.22, metalness: 0.94 });
+
+  // Main cylindrical horizontal boiler
+  const boiler = new THREE.Mesh(new THREE.CylinderGeometry(1.04, 1.04, 7.0, 36), boilerIron);
   boiler.rotation.x = Math.PI / 2;
-  boiler.position.set(0, 2.2, 1.0);
-  boiler.castShadow = true;
+  boiler.position.set(0, 2.22, 0.9);
+  boiler.castShadow = boiler.receiveShadow = true;
   g.add(boiler);
-  // smokebox + stack
-  const smokebox = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.2, 32), dark);
+
+  // Gleaming brass boiler bands (straps)
+  [-1.8, -0.4, 1.0, 2.4, 3.8].forEach((zPos) => {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(1.055, 0.024, 10, 36), brass);
+    band.position.set(0, 2.22, zPos);
+    band.castShadow = true;
+    g.add(band);
+  });
+
+  // Riveted front smokebox + hinged smokebox door with central locking wheel
+  const smokebox = new THREE.Mesh(new THREE.CylinderGeometry(1.09, 1.09, 1.45, 36), smokeboxIron);
   smokebox.rotation.x = Math.PI / 2;
-  smokebox.position.set(0, 2.2, 5.0);
+  smokebox.position.set(0, 2.22, 4.95);
+  smokebox.castShadow = true;
   g.add(smokebox);
-  const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.3, 1.8, 20), dark);
-  stack.position.set(0, 3.9, 4.6);
+
+  const doorFront = new THREE.Mesh(new THREE.SphereGeometry(1.02, 28, 16, 0, Math.PI * 2, 0, Math.PI * 0.32), smokeboxIron);
+  doorFront.rotation.x = Math.PI / 2;
+  doorFront.position.set(0, 2.22, 4.82);
+  g.add(doorFront);
+
+  // Tall flared chimney smokestack with brass coronet lip
+  const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.28, 1.95, 24), smokeboxIron);
+  stack.position.set(0, 4.02, 4.75);
+  stack.castShadow = true;
   g.add(stack);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 16), brass);
-  dome.position.set(0, 3.2, 1.6);
-  g.add(dome);
-  // cab
-  g.add(box(2.6, 2.6, 2.4, dark, 0, 2.6, -3.4));
-  g.add(box(2.8, 0.2, 2.8, dark, 0, 3.95, -3.4));
-  // frame + running board
-  g.add(box(2.4, 0.35, 10.5, dark, 0, 1.05, 0.4));
-  // wheels: 2 small leading + 3 large drivers per side
-  const bigWheel = new THREE.CylinderGeometry(0.9, 0.9, 0.22, 28);
-  const smallWheel = new THREE.CylinderGeometry(0.45, 0.45, 0.2, 20);
+  const stackCrown = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.055, 12, 28), brass);
+  stackCrown.rotation.x = Math.PI / 2;
+  stackCrown.position.set(0, 4.98, 4.75);
+  g.add(stackCrown);
+
+  // Polished brass steam dome + safety valve whistle column
+  const domeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.58, 0.45, 24), brass);
+  domeBase.position.set(0, 3.25, 1.5);
+  const domeTop = new THREE.Mesh(new THREE.SphereGeometry(0.54, 24, 16), brass);
+  domeTop.position.set(0, 3.48, 1.5);
+  const whistle = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.65, 16), brass);
+  whistle.position.set(0, 3.45, -0.6);
+  g.add(domeBase, domeTop, whistle);
+
+  // Twin external high-pressure steam cylinders & reciprocating steel piston rods
+  const pistons = [];
+  [-1.32, 1.32].forEach((x) => {
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 1.35, 20), boilerIron);
+    cyl.rotation.x = Math.PI / 2;
+    cyl.position.set(x, 0.92, 4.35);
+    cyl.castShadow = true;
+    g.add(cyl);
+
+    const cylCap = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.08, 20), brass);
+    cylCap.rotation.x = Math.PI / 2;
+    cylCap.position.set(x, 0.92, 5.04);
+    g.add(cylCap);
+
+    const pistonRod = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 2.2, 12), steelRim);
+    pistonRod.rotation.x = Math.PI / 2;
+    pistonRod.position.set(x, 0.90, 2.8);
+    g.add(pistonRod);
+    pistons.push(pistonRod);
+  });
+
+  // Engineer's cab with arched lookouts, overhanging roof & warm glowing firebox interior
+  g.add(box(2.65, 1.35, 2.4, boilerIron, 0, 1.85, -3.4));
+  g.add(box(2.65, 1.35, 0.18, boilerIron, 0, 3.15, -2.28));
+  [-1.24, 1.24].forEach((x) => {
+    g.add(box(0.18, 1.35, 2.4, boilerIron, x, 3.15, -3.4));
+  });
+  // Overhanging arched cab roof
+  g.add(box(2.9, 0.18, 2.9, smokeboxIron, 0, 3.92, -3.45));
+  // Glowing coal firebox door inside the cab
+  const fireboxGlow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.42, 20),
+    new THREE.MeshStandardMaterial({ color: 0xff6a14, emissive: 0xff4500, emissiveIntensity: 4.2 })
+  );
+  fireboxGlow.rotation.y = Math.PI;
+  fireboxGlow.position.set(0, 1.85, -2.52);
+  g.add(fireboxGlow);
+  const fireLight = new THREE.PointLight(0xff6a18, 18, 8, 1.6);
+  fireLight.position.set(0, 1.9, -2.9);
+  g.add(fireLight);
+
+  // Chassis frame + crimson running boards
+  g.add(box(2.2, 0.36, 10.6, smokeboxIron, 0, 1.05, 0.4));
+  g.add(box(2.68, 0.10, 10.8, crimsonTrim, 0, 1.24, 0.4));
+
+  // Wheels: 3 large spoked driving wheels + 2 leading pilot wheels per side
+  const bigWheel = new THREE.CylinderGeometry(0.9, 0.9, 0.22, 32);
+  const smallWheel = new THREE.CylinderGeometry(0.45, 0.45, 0.2, 24);
   const wheels = [];
-  [-1.25, 1.25].forEach((x) => {
+  const rods = [];
+  [-1.25, 1.25].forEach((x, sideIdx) => {
     [-2.6, -0.6, 1.4].forEach((z) => {
-      const w = new THREE.Mesh(bigWheel, dark);
+      const w = new THREE.Mesh(bigWheel, boilerIron);
       w.rotation.z = Math.PI / 2;
       w.position.set(x, 0.9, z);
       w.castShadow = true;
       g.add(w);
       wheels.push(w);
-      // spokes
-      for (let s = 0; s < 8; s++) {
-        const sp = box(0.08, 1.5, 0.08, brass, 0, 0, 0);
-        sp.rotation.x = (s / 8) * Math.PI;
+      // Steel tire rim
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.89, 0.045, 10, 32), steelRim);
+      rim.rotation.y = Math.PI / 2;
+      w.add(rim);
+      // Radial brass/iron spokes + crescent counterweight
+      for (let s = 0; s < 10; s++) {
+        const sp = box(0.07, 1.62, 0.06, brass, 0, 0, 0);
+        sp.rotation.x = (s / 10) * Math.PI;
         w.add(sp);
       }
     });
-    [3.6, 4.6].forEach((z) => {
-      const w = new THREE.Mesh(smallWheel, dark);
+    [3.5, 4.65].forEach((z) => {
+      const w = new THREE.Mesh(smallWheel, boilerIron);
       w.rotation.z = Math.PI / 2;
       w.position.set(x, 0.45, z);
+      w.castShadow = true;
       g.add(w);
       wheels.push(w);
     });
-    // connecting rod
-    const rod = box(0.12, 0.16, 4.2, brass, x * 1.1, 0.65, -0.6);
+    // Articulated side coupling rod + eccentric main rod
+    const rod = box(0.10, 0.14, 4.2, steelRim, x * 1.12, 0.72, -0.6);
     g.add(rod);
-    rod.userData.isRod = true;
+    rods.push({ mesh: rod, phaseOffset: sideIdx * Math.PI * 0.5 });
   });
-  // cowcatcher
-  const cc = box(2.4, 1.0, 0.2, dark, 0, 0.6, 5.9);
-  cc.rotation.x = 0.6;
+
+  // Slatted iron cowcatcher (pilot) at front
+  const cc = box(2.4, 0.95, 0.22, smokeboxIron, 0, 0.58, 5.95);
+  cc.rotation.x = 0.58;
   g.add(cc);
-  // headlamp
-  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0xfff1c0, emissive: 0xffd27a, emissiveIntensity: 2.2 }));
+
+  // Brass oil/gas headlamp + volumetric beam
+  const lampHousing = box(0.52, 0.58, 0.48, brass, 0, 3.15, 5.65);
+  g.add(lampHousing);
+  const lamp = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.24, 0.24, 0.12, 20),
+    new THREE.MeshStandardMaterial({ color: 0xfff4d0, emissive: 0xffd27a, emissiveIntensity: 3.2 })
+  );
   lamp.rotation.x = Math.PI / 2;
-  lamp.position.set(0, 3.1, 5.7);
+  lamp.position.set(0, 3.15, 5.90);
   g.add(lamp);
   const light = new THREE.SpotLight(0xffe0a0, 120, 60, 0.35, 0.6, 1.6);
-  light.position.set(0, 3.1, 5.8);
+  light.position.set(0, 3.15, 5.95);
   light.target.position.set(0, 1.2, 40);
   g.add(light, light.target);
-  // tender
-  g.add(box(2.6, 2.2, 4.2, dark, 0, 2.1, -6.9));
-  g.add(box(2.4, 0.5, 3.8, new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 1 }), 0, 3.3, -6.9));
-  [-1.25, 1.25].forEach((x) => [-5.6, -8.2].forEach((z) => {
-    const w = new THREE.Mesh(smallWheel, dark);
-    w.rotation.z = Math.PI / 2;
-    w.position.set(x, 0.45, z);
-    g.add(w);
-    wheels.push(w);
-  }));
+
+  // Coal & water tender car behind cab with heaped irregular coal mound
+  g.add(box(2.58, 2.05, 4.2, boilerIron, 0, 2.02, -6.9));
+  g.add(box(2.68, 0.12, 4.3, crimsonTrim, 0, 1.02, -6.9));
+  const coalMat = new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.75, metalness: 0.2 });
+  const coalMound = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, 1), coalMat);
+  coalMound.scale.set(0.95, 0.48, 1.45);
+  coalMound.position.set(0, 3.12, -6.8);
+  g.add(coalMound);
+
+  [-1.25, 1.25].forEach((x) =>
+    [-5.6, -8.2].forEach((z) => {
+      const w = new THREE.Mesh(smallWheel, boilerIron);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(x, 0.45, z);
+      w.castShadow = true;
+      g.add(w);
+      wheels.push(w);
+    })
+  );
   g.position.set(...position);
   g.rotation.y = rotationY;
   animCallbacks.push((t) => {
+    const wAngle = t * 2.4;
     wheels.forEach((w) => {
-      w.rotation.x = t * 2.4;
+      w.rotation.x = wAngle;
     });
-    g.children.forEach((c) => {
-      if (c.userData.isRod) c.position.y = 0.65 + Math.sin(t * 2.4) * 0.25;
+    rods.forEach(({ mesh, phaseOffset }) => {
+      mesh.position.y = 0.72 + Math.sin(wAngle + phaseOffset) * 0.24;
+      mesh.position.z = -0.6 + Math.cos(wAngle + phaseOffset) * 0.24;
+    });
+    pistons.forEach((p, idx) => {
+      p.position.z = 2.8 + Math.cos(wAngle + idx * Math.PI * 0.5) * 0.28;
     });
   });
   return g;
@@ -1329,7 +1438,7 @@ export function createBronzeFoundryAndStele(animCallbacks, { position = [3.8, 0,
 /* ------------------------------------------------------------------ 20. ANTIKYTHERA ASTRONOMICAL MECHANISM (~150–100 BCE) */
 export function createAntikytheraMechanism(animCallbacks, { position = [0, 0, 1.2], rotationY = 0.2 } = {}) {
   const g = new THREE.Group();
-  const marble = new THREE.MeshStandardMaterial({ color: 0xece6da, roughness: 0.45 });
+  const marble = new THREE.MeshStandardMaterial({ color: 0xa89c8a, roughness: 0.78 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x4e321c, roughness: 0.65 });
   const bronze = new THREE.MeshStandardMaterial({ color: 0xc8963e, roughness: 0.28, metalness: 0.92 });
   const verdigris = new THREE.MeshStandardMaterial({ color: 0x4f8c6e, roughness: 0.45, metalness: 0.65 });
@@ -1491,4 +1600,251 @@ export function createApolloRetroreflector({ position = [2.4, 0, 2.2], rotationY
   g.rotation.y = rotationY;
   return g;
 }
+
+/* ------------------------------------------------------------------ 26. NEOLITHIC MUD-BRICK VILLAGE COMPOUND (Çatalhöyük / Jericho) */
+export function createNeolithicVillage(mudMat, { position = [0, 0, -14], rotationY = 0 } = {}) {
+  const g = new THREE.Group();
+  const timber = new THREE.MeshStandardMaterial({ color: 0x4e341e, roughness: 0.88, metalness: 0.02 });
+  const thatch = new THREE.MeshStandardMaterial({ color: 0xc2a460, roughness: 0.92, metalness: 0.02 });
+  const darkRecess = new THREE.MeshStandardMaterial({ color: 0x18120c, roughness: 0.95 });
+  const emberMat = new THREE.MeshStandardMaterial({ color: 0xff6a18, emissive: 0xff4500, emissiveIntensity: 3.5 });
+
+  // Terraced multi-room mud-brick dwellings (Çatalhöyük clustered architecture)
+  const rooms = [
+    { x: -1.6, z: 0, w: 6.8, h: 3.3, d: 5.4 },
+    { x: 4.4, z: 0.6, w: 5.4, h: 2.7, d: 4.8 },
+    { x: -4.8, z: -3.2, w: 5.2, h: 4.2, d: 4.6 },
+  ];
+
+  rooms.forEach(({ x, z, w, h, d }) => {
+    // Plastered mud-brick main volume + subtle roof parapet
+    g.add(box(w, h, d, mudMat, x, h / 2, z));
+    g.add(box(w + 0.16, 0.24, d + 0.16, mudMat, x, h + 0.12, z));
+
+    // Projecting cedar roof-beams (vigas) along front & back walls
+    const nBeams = Math.floor(w / 0.85);
+    for (let i = 0; i < nBeams; i++) {
+      const bx = x - w / 2 + 0.5 + i * 0.85;
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, d + 0.75, 8), timber);
+      beam.rotation.x = Math.PI / 2;
+      beam.position.set(bx, h - 0.25, z);
+      beam.castShadow = true;
+      g.add(beam);
+    }
+  });
+
+  // Recessed timber-lintel doorway & deep ventilation windows on main house
+  g.add(box(1.15, 2.05, 0.18, darkRecess, -1.6, 1.02, 2.66));
+  g.add(box(1.55, 0.16, 0.32, timber, -1.6, 2.10, 2.68));
+  [-3.4, 0.2, 4.4].forEach((wx, idx) => {
+    const wy = idx === 2 ? 1.65 : 1.95;
+    const wz = idx === 2 ? 2.96 : 2.66;
+    g.add(box(0.68, 0.68, 0.18, darkRecess, wx, wy, wz));
+    g.add(box(0.88, 0.12, 0.28, timber, wx, wy + 0.38, wz));
+  });
+
+  // Wooden rooftop access ladder leaning against the terraced mud-brick wall (signature Çatalhöyük feature!)
+  const ladderGroup = new THREE.Group();
+  [-0.24, 0.24].forEach((lx) => {
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 4.1, 8), timber);
+    rail.position.set(lx, 2.0, 0);
+    rail.castShadow = true;
+    ladderGroup.add(rail);
+  });
+  for (let r = 0; r < 9; r++) {
+    const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.52, 8), timber);
+    rung.rotation.z = Math.PI / 2;
+    rung.position.set(0, 0.35 + r * 0.42, 0);
+    ladderGroup.add(rung);
+  }
+  ladderGroup.position.set(1.4, 0, 2.95);
+  ladderGroup.rotation.x = -0.28;
+  g.add(ladderGroup);
+
+  // Shaded timber-post courtyard portico with woven reed thatch awning
+  const porticoZ = 4.1;
+  [-4.2, -1.6, 1.0].forEach((px) => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 2.55, 10), timber);
+    post.position.set(px, 1.275, porticoZ);
+    post.castShadow = true;
+    g.add(post);
+  });
+  g.add(box(5.6, 0.12, 0.14, timber, -1.6, 2.56, porticoZ));
+  const awning = box(5.8, 0.09, 1.85, thatch, -1.6, 2.68, 3.35);
+  awning.rotation.x = 0.12;
+  g.add(awning);
+
+  // Outdoor beehive clay bread oven (tannur) with glowing baking embers
+  const ovenDome = new THREE.Mesh(new THREE.SphereGeometry(0.85, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.58), mudMat);
+  ovenDome.scale.set(1.0, 1.15, 1.0);
+  ovenDome.position.set(3.8, 0.0, 4.2);
+  ovenDome.castShadow = ovenDome.receiveShadow = true;
+  g.add(ovenDome);
+  const ovenMouth = new THREE.Mesh(new THREE.CircleGeometry(0.28, 16), emberMat);
+  ovenMouth.position.set(3.8, 0.34, 5.02);
+  g.add(ovenMouth);
+
+  // Low mud-plaster courtyard bench & grain storage bins
+  g.add(box(3.2, 0.42, 0.85, mudMat, -2.8, 0.21, 3.1));
+
+  g.position.set(...position);
+  g.rotation.y = rotationY;
+  return g;
+}
+
+/* ------------------------------------------------------------------ 27. GIZA LIMESTONE HAULING SLED & ROYAL SURVEY PAVILION */
+export function createPyramidRampAndSled(sandstoneMat, woodMat, { sledPos = [-3.2, 0, -2.4], sledRotY = 0.26, pavilionPos = [0, 0, 1.0] } = {}) {
+  const g = new THREE.Group();
+  const ropeMat = new THREE.MeshStandardMaterial({ color: 0xc2a268, roughness: 0.88, metalness: 0.02 });
+  const linenMat = new THREE.MeshStandardMaterial({ color: 0xc2b498, roughness: 0.88, side: THREE.DoubleSide });
+  const goldTrim = new THREE.MeshStandardMaterial({ color: 0xd4a238, roughness: 0.32, metalness: 0.82 });
+  const paintedWood = new THREE.MeshStandardMaterial({ color: 0x8c2d1c, roughness: 0.65 });
+
+  // 1. Heavy Cedar Hauling Sled + 2.5-ton Tura Limestone Block + Wooden Rollers + Taut Ropes
+  const sledGroup = new THREE.Group();
+  [-0.58, 0.58].forEach((sx) => {
+    // Runner beam
+    sledGroup.add(box(0.18, 0.16, 2.5, woodMat, sx, 0.14, 0));
+    // Curved prow of sled runner
+    const prow = box(0.18, 0.16, 0.45, woodMat, sx, 0.25, 1.38);
+    prow.rotation.x = -0.52;
+    sledGroup.add(prow);
+  });
+  // Cross-timbers & wooden rollers beneath the sled
+  for (let i = -2; i <= 2; i++) {
+    sledGroup.add(box(1.36, 0.08, 0.22, woodMat, 0, 0.24, i * 0.48));
+    const roller = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.55, 12), woodMat);
+    roller.rotation.z = Math.PI / 2;
+    roller.position.set(0, 0.06, i * 0.52);
+    roller.castShadow = true;
+    sledGroup.add(roller);
+  }
+  // Massive dressed limestone block lashed to the sled
+  const block = box(1.18, 0.92, 1.65, sandstoneMat, 0, 0.74, -0.08);
+  sledGroup.add(block);
+  // Twisted papyrus lashing ropes around block + hauling ropes extending forward toward the builders
+  [-0.42, 0.42].forEach((rz) => {
+    sledGroup.add(box(1.22, 0.96, 0.05, ropeMat, 0, 0.74, rz));
+  });
+  [-0.38, 0.38].forEach((rx) => {
+    const haulRope = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 2.2, 8), ropeMat);
+    haulRope.rotation.x = Math.PI / 2 - 0.22;
+    haulRope.position.set(rx, 0.48, 2.1);
+    sledGroup.add(haulRope);
+  });
+  sledGroup.position.set(...sledPos);
+  sledGroup.rotation.y = sledRotY;
+  g.add(sledGroup);
+
+  // 2. Royal Scribe & Architect Pavilion (stone dais, carved table, and lotus-column sun canopy)
+  const pavGroup = new THREE.Group();
+  // Stepped limestone dais platform
+  pavGroup.add(box(3.8, 0.16, 2.8, sandstoneMat, 0, 0.08, 0));
+  // Architect's stone drafting table with carved legs (top at y = 0.75)
+  pavGroup.add(box(2.2, 0.12, 1.15, sandstoneMat, 0, 0.69, 0));
+  [[-0.88, -0.42], [0.88, -0.42], [-0.88, 0.42], [0.88, 0.42]].forEach(([lx, lz]) => {
+    pavGroup.add(box(0.22, 0.55, 0.22, sandstoneMat, lx, 0.36, lz));
+  });
+  // 4 Painted Lotus-Capital Canopy Columns + Linen Sunshade
+  [[-1.65, -1.15], [1.65, -1.15], [-1.65, 1.15], [1.65, 1.15]].forEach(([cx, cz]) => {
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.105, 2.65, 14), paintedWood);
+    col.position.set(cx, 1.40, cz);
+    col.castShadow = true;
+    pavGroup.add(col);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.085, 0.22, 14), goldTrim);
+    cap.position.set(cx, 2.75, cz);
+    pavGroup.add(cap);
+  });
+  pavGroup.add(box(3.6, 0.09, 0.09, woodMat, 0, 2.88, -1.15));
+  pavGroup.add(box(3.6, 0.09, 0.09, woodMat, 0, 2.88, 1.15));
+  const canopy = box(3.75, 0.05, 2.6, linenMat, 0, 2.94, 0);
+  pavGroup.add(canopy);
+
+  pavGroup.position.set(...pavilionPos);
+  g.add(pavGroup);
+
+  return g;
+}
+
+/* ------------------------------------------------------------------ 28. PLEISTOCENE CAMP WINDBREAK SHELTER & HIDE-DRYING RACK */
+export function createPrehistoricShelterAndRack({ position = [3.6, 0, -2.4], rotationY = -0.5 } = {}) {
+  const g = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4c331c, roughness: 0.92, metalness: 0.02 });
+  const hideMat = new THREE.MeshStandardMaterial({ color: 0x6e482b, roughness: 0.92, metalness: 0.02, side: THREE.DoubleSide });
+  const darkHideMat = new THREE.MeshStandardMaterial({ color: 0x52351e, roughness: 0.94, metalness: 0.02, side: THREE.DoubleSide });
+  const boneMat = new THREE.MeshStandardMaterial({ color: 0xe6dcc8, roughness: 0.55, metalness: 0.05 });
+
+  // A-frame timber & mammoth-bone lean-to shelter with lashed cross-poles
+  [-1.2, 0, 1.2].forEach((x) => {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.068, 2.75, 10), woodMat);
+    pole.position.set(x, 1.05, -0.35);
+    pole.rotation.x = 0.58;
+    pole.castShadow = true;
+    g.add(pole);
+  });
+  // Horizontal lashed purlin cross-poles supporting the hides
+  [-0.55, 0.0, 0.55].forEach((offset) => {
+    const purlin = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.042, 2.75, 8), woodMat);
+    purlin.rotation.z = Math.PI / 2;
+    purlin.position.set(0, 1.08 + offset * 0.82, -0.32 + offset * 0.54);
+    purlin.castShadow = true;
+    g.add(purlin);
+  });
+
+  // Organically sagged, scalloped animal-hide pelt canopy draped over the timber frame
+  const hideGeo = new THREE.PlaneGeometry(2.55, 2.18, 28, 22);
+  const hPos = hideGeo.attributes.position;
+  for (let i = 0; i < hPos.count; i++) {
+    let vx = hPos.getX(i);
+    let vy = hPos.getY(i);
+    const nx = vx / 1.275; // -1..1 across poles
+    const ny = vy / 1.09;  // -1..1 along slope
+    // Catenary sag between the 3 main poles (at nx = -0.94, 0, +0.94)
+    const poleDist = Math.abs(Math.sin(nx * Math.PI));
+    const sag = -0.095 * poleDist * (1.0 - 0.25 * ny * ny);
+    // Natural wavy hide wrinkles and scalloped raw-hide border
+    const wrinkle = 0.022 * Math.sin(vx * 7.5 + vy * 5.0) * Math.cos(vy * 8.0);
+    const edgeScallop = 1.0 - 0.06 * Math.pow(Math.max(Math.abs(nx), Math.abs(ny)), 3.0) * (0.5 + 0.5 * Math.sin(vx * 9.0 + vy * 11.0));
+    hPos.setXYZ(i, vx * edgeScallop, vy * edgeScallop, sag + wrinkle);
+  }
+  hideGeo.computeVertexNormals();
+  const hideCanopy = new THREE.Mesh(hideGeo, hideMat);
+  hideCanopy.rotation.x = -Math.PI / 2 + 0.58;
+  hideCanopy.position.set(0, 1.15, -0.28);
+  hideCanopy.castShadow = hideCanopy.receiveShadow = true;
+  g.add(hideCanopy);
+
+  // Secondary overlapping darker bison/deer pelt on upper ridge for authentic layered hide texture
+  const upperPeltGeo = new THREE.PlaneGeometry(1.75, 1.25, 18, 14);
+  const uPos = upperPeltGeo.attributes.position;
+  for (let i = 0; i < uPos.count; i++) {
+    const vx = uPos.getX(i);
+    const vy = uPos.getY(i);
+    const sag = -0.05 * Math.cos(vx * 1.4) + 0.018 * Math.sin(vx * 9.0 + vy * 7.0);
+    uPos.setZ(i, sag);
+  }
+  upperPeltGeo.computeVertexNormals();
+  const upperPelt = new THREE.Mesh(upperPeltGeo, darkHideMat);
+  upperPelt.rotation.x = -Math.PI / 2 + 0.58;
+  upperPelt.rotation.z = 0.08;
+  upperPelt.position.set(-0.18, 1.42, -0.10);
+  upperPelt.castShadow = true;
+  g.add(upperPelt);
+
+  // Pair of curved mammoth ivory tusks flanking & anchoring the shelter entrance
+  [-1.35, 1.35].forEach((side) => {
+    const tusk = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.065, 10, 24, Math.PI * 0.55), boneMat);
+    tusk.rotation.y = Math.PI / 2;
+    tusk.rotation.x = -0.25;
+    tusk.position.set(side, 0.25, 0.2);
+    tusk.castShadow = true;
+    g.add(tusk);
+  });
+
+  g.position.set(...position);
+  g.rotation.y = rotationY;
+  return g;
+}
+
+
 

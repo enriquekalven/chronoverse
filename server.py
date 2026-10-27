@@ -43,10 +43,12 @@ class SecureStaticHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header(
             "Content-Security-Policy",
-            "default-src 'self'; script-src 'self'; style-src 'self'; "
-            "img-src 'self' data: blob:; media-src 'self' data: blob:; "
-            "connect-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; "
-            "base-uri 'self'; form-action 'self';",
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob: https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com; "
+            "media-src 'self' data: blob:; "
+            "connect-src 'self' data: blob: https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; "
+            "object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
         )
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")

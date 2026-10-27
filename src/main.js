@@ -63,6 +63,11 @@ const SCENE_ART = {
 const artFor = (m) => (SCENE_ART[m.id] ? `./assets/scenes/${SCENE_ART[m.id]}.jpg` : null);
 
 const splitHeadline = (title = '') => title.split(/[:：]/)[0].trim();
+const shortPoiHeadline = (title = '') => {
+  const head = title.split(/\s*[—–]\s*|\s*\(/)[0].trim();
+  const clean = head || splitHeadline(title);
+  return clean.length > 36 ? `${clean.slice(0, 34).trim()}…` : clean;
+};
 
 const canvas = document.getElementById('timeline-canvas');
 const labelLayer = document.getElementById('label-layer');
@@ -673,7 +678,32 @@ function updateFloatingMarkers() {
   const seenKeys = new Set();
   const eraKey = `${engine.viewMode}:${engine.activeIndex}:${currentLang}`;
 
-  visibleMarkers.forEach(({ index, milestone, x, y, distance, action, targetStop }) => {
+  // De-overlap screen-space coordinates so POI markers never stack on top of each other or obscure 3D actors
+  const placed = [];
+  const minDx = 195;
+  const minDy = 36;
+  const adjustedMarkers = visibleMarkers.map((m) => {
+    let ax = m.x;
+    let ay = m.y;
+    for (let pass = 0; pass < 5; pass++) {
+      for (let i = 0; i < placed.length; i++) {
+        const p = placed[i];
+        const dx = ax - p.x;
+        const dy = ay - p.y;
+        if (Math.abs(dx) < minDx && Math.abs(dy) < minDy) {
+          const pushY = (dy <= 0 ? -1 : 1) * (minDy - Math.abs(dy) + 3);
+          ay += pushY * 0.65;
+          p.y -= pushY * 0.35;
+        }
+      }
+    }
+    ay = Math.max(185, Math.min(window.innerHeight - 115, ay));
+    const item = { ...m, x: ax, y: ay };
+    placed.push(item);
+    return item;
+  });
+
+  adjustedMarkers.forEach(({ index, milestone, x, y, distance, action, targetStop }) => {
     const key = `${eraKey}:${index}`;
     seenKeys.add(key);
     let btn = floatingMarkerMap.get(key);
@@ -681,21 +711,38 @@ function updateFloatingMarkers() {
       btn = document.createElement('button');
       btn.type = 'button';
       btn.className = action === 'dive' ? 'marker-tag poi-tag portal-pin-tag' : 'marker-tag poi-tag';
+      let shortLabel = '';
+      let fullLabel = '';
       if (action === 'dive') {
         const ms = MILESTONES[targetStop ?? engine.activeIndex] || milestone;
-        btn.textContent = formatUIString(ui.markerDivePrefix, {
+        shortLabel = formatUIString(ui.markerDivePrefix, {
           title: splitHeadline(ms.title),
         });
+        fullLabel = shortLabel;
       } else if (action === 'warp') {
         const nextMs = MILESTONES[targetStop ?? engine.activeIndex + 1];
-        btn.textContent = nextMs
+        shortLabel = nextMs
           ? formatUIString(ui.markerNextEarthPrefix, {
               era: nextMs.eraBadge,
               title: splitHeadline(nextMs.title),
             })
-          : `${milestone.icon} ${milestone.title}`;
+          : `${milestone.icon} ${shortPoiHeadline(milestone.title)}`;
+        fullLabel = shortLabel;
       } else {
-        btn.textContent = `${milestone.icon} ${milestone.title}`;
+        shortLabel = `${milestone.icon} ${shortPoiHeadline(milestone.title)}`;
+        fullLabel = `${milestone.icon} ${milestone.title}`;
+      }
+      btn.textContent = shortLabel;
+      btn.title = milestone.title;
+      btn.dataset.shortLabel = shortLabel;
+      btn.dataset.fullLabel = fullLabel;
+      if (fullLabel !== shortLabel) {
+        btn.addEventListener('pointerenter', () => {
+          btn.textContent = btn.dataset.fullLabel;
+        });
+        btn.addEventListener('pointerleave', () => {
+          btn.textContent = btn.dataset.shortLabel;
+        });
       }
       btn.addEventListener('click', () => {
         if (action === 'dive') {
@@ -709,7 +756,7 @@ function updateFloatingMarkers() {
       labelLayer.appendChild(btn);
       floatingMarkerMap.set(key, btn);
     }
-    const scale = Math.max(0.75, Math.min(1.05, 22 / Math.max(1, distance || 12)));
+    const scale = Math.max(0.75, Math.min(1.02, 20 / Math.max(1, distance || 12)));
     btn.style.left = `${x.toFixed(1)}px`;
     btn.style.top = `${y.toFixed(1)}px`;
     btn.style.transform = `translate(-50%, -100%) scale(${scale.toFixed(2)})`;
@@ -723,22 +770,71 @@ function updateFloatingMarkers() {
   });
 }
 
-// Speech Synthesis Read-Aloud in all 10 Languages
-function speakMilestone(milestone) {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const text = `${milestone.eraBadge}. ${milestone.title}. ${milestone.summary} ${ui.mindBlowingFactPrefix} ${milestone.facts[0]}`;
-  const utter = new SpeechSynthesisUtterance(text);
-  const langMeta = getLanguageMeta(currentLang);
-  utter.lang = langMeta.ttsLang;
-  utter.rate = 1.0;
-  utter.pitch = 1.05;
-  utter.onend = () => {
-    isReadingAloud = false;
+// Google Cloud Chirp 3 HD Neural Read-Aloud in all 10 Languages
+let activeChirpAudio = null;
+
+function stopReadAloud() {
+  if (activeChirpAudio) {
+    activeChirpAudio.pause();
+    activeChirpAudio.src = '';
+    activeChirpAudio = null;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  isReadingAloud = false;
+  if (btnReadAloud) {
     btnReadAloud.textContent = ui.btnReadAloud;
     btnReadAloud.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function speakMilestone(milestone) {
+  if (!milestone) return;
+  if (activeChirpAudio) {
+    activeChirpAudio.pause();
+    activeChirpAudio.src = '';
+    activeChirpAudio = null;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  const audioUrl = `./assets/audio/chirp/${currentLang}/${milestone.id}.mp3`;
+  const audio = new Audio(audioUrl);
+  audio.preload = 'auto';
+  activeChirpAudio = audio;
+
+  audio.onended = () => {
+    if (activeChirpAudio === audio) {
+      activeChirpAudio = null;
+      isReadingAloud = false;
+      btnReadAloud.textContent = ui.btnReadAloud;
+      btnReadAloud.setAttribute('aria-pressed', 'false');
+    }
   };
-  window.speechSynthesis.speak(utter);
+
+  audio.onerror = () => {
+    // Fallback only if offline or audio asset fails to load
+    if (activeChirpAudio !== audio) return;
+    activeChirpAudio = null;
+    if (!('speechSynthesis' in window)) {
+      stopReadAloud();
+      return;
+    }
+    const text = `${milestone.eraBadge}. ${milestone.title}. ${milestone.summary} ${ui.mindBlowingFactPrefix} ${milestone.facts[0]}`;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = getLanguageMeta(currentLang).ttsLang;
+    utter.rate = 1.0;
+    utter.onend = () => stopReadAloud();
+    window.speechSynthesis.speak(utter);
+  };
+
+  audio.play().catch(() => {
+    if (activeChirpAudio === audio) {
+      stopReadAloud();
+    }
+  });
 }
 
 // All 30 Stops Atlas Modal with Photorealistic Thumbnails
@@ -928,12 +1024,8 @@ btnAutoplay.addEventListener('click', () => {
 });
 
 btnReadAloud.addEventListener('click', () => {
-  if (!('speechSynthesis' in window)) return;
   if (isReadingAloud) {
-    window.speechSynthesis.cancel();
-    isReadingAloud = false;
-    btnReadAloud.textContent = ui.btnReadAloud;
-    btnReadAloud.setAttribute('aria-pressed', 'false');
+    stopReadAloud();
   } else {
     isReadingAloud = true;
     btnReadAloud.textContent = ui.btnStopAudio;
@@ -943,6 +1035,7 @@ btnReadAloud.addEventListener('click', () => {
     trackEvent('read_aloud', {
       milestone_id: activeMs.id,
       language: currentLang,
+      voice_engine: 'Chirp3-HD-Aoede',
     });
   }
 });
